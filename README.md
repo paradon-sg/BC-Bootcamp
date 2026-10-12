@@ -949,7 +949,7 @@ erDiagram
 
   USER {
     bigint id PK
-    string email_address "unique"
+    string email "unique"
   }
   PROJECT {
     bigint id PK
@@ -974,7 +974,7 @@ bin/rails generate model Project user:references name:string
 bin/rails generate model Task project:references title:string completed:boolean
 ```
 
-> **Note:** ตาราง `users` สร้างจาก `bin/rails generate authentication` (มากับ Rails 8) ต้องมีก่อนสร้าง `Project` ส่วน `references` สร้าง foreign key และ index ให้อัตโนมัติ ส่วน `completed` ควรตั้ง `default: false, null: false` ใน migration
+> **Note:** ตาราง `users` ต้องมีก่อนสร้าง `Project` เช่น `bin/rails generate model User email:string:uniq` (ถ้าใช้ `bin/rails generate authentication` ของ Rails 8 column จะชื่อ `email_address`) ส่วน `references` สร้าง foreign key และ index ให้อัตโนมัติ ส่วน `completed` ควรตั้ง `default: false, null: false` ใน migration
 
 ### Step 1: Scaffold
 
