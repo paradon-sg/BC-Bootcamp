@@ -1,962 +1,951 @@
+# Hotwire Bootcamp
+
 ## Table of Contents
 
 1. [Prerequisites](#1-prerequisites)
-2. [Why Angular 21?](#2-why-angular-21)
+2. [What is Hotwire?](#2-what-is-hotwire)
 3. [Environment Setup](#3-environment-setup)
-4. [Project Structure & Architecture](#4-project-structure--architecture)
-5. [CSR vs SSR](#5-csr-vs-ssr)
-6. [SPA vs MPA](#6-spa-vs-mpa)
-7. [In-depth Guides](#7-in-depth-guides)
-8. [Components](#8-components)
-9. [Template syntax](#9-template-syntax)
-10. [Built-in directives](#10-built-in-directives)
-11. [Angular Routing](#11-angular-routing)
-12. [Forms in Angular](#12-forms-in-angular)
-13. [HTTP Client and Data Layer](#13-http-client-and-data-layer)
-14. [Angular Interfaces](#14-angular-interfaces)
-15. [Environments](#15-environments)
-16. [HTTP Interceptors](#16-http-interceptors)
-17. [Recommended Tooling](#17-recommended-tooling)
-18. [Resources](#18-resources)
+4. [Project Structure](#4-project-structure)
+5. [SPA vs HTML over the wire](#5-spa-vs-html-over-the-wire)
+6. [Turbo Drive](#6-turbo-drive)
+7. [Turbo Frames](#7-turbo-frames)
+8. [Turbo Streams](#8-turbo-streams)
+9. [Broadcasting (Real-time)](#9-broadcasting-real-time)
+10. [Page Refresh & Morphing](#10-page-refresh--morphing)
+11. [Stimulus](#11-stimulus)
+12. [Workshop: Task App](#12-workshop-task-app)
+13. [Testing](#13-testing)
+14. [Best Practices & Common Pitfalls](#14-best-practices--common-pitfalls)
+15. [Resources](#15-resources)
 
 ## 1. Prerequisites
 
 **ความรู้พื้นฐานที่จำเป็น:**
 
-- พื้นฐาน JavaScript และ TypeScript
+- พื้นฐาน Ruby และ Ruby on Rails (MVC, Routing, ActiveRecord)
 - ความรู้ HTML/CSS
-- ติดตั้ง Node.js LTS
-- ติดตั้ง VS Code พร้อม Angular Language Service Extension
+- พื้นฐาน JavaScript (ES modules, class, event)
+- ติดตั้ง Ruby 3.4+ และ Rails 8+
+- ติดตั้ง Node.js LTS และ Yarn (ใช้สำหรับ esbuild)
+- ติดตั้ง VS Code พร้อม Ruby LSP Extension
 
-## 2. Why Angular 21?
+## 2. What is Hotwire?
 
-**ทำไมต้อง Angular 21?**
+**Hotwire (HTML Over The Wire)** คือแนวทางการสร้างเว็บแอปที่รู้สึกเร็วเหมือน SPA โดยส่ง **HTML** จาก Server แทน **JSON** ทำให้เขียน JavaScript น้อยลงมาก และ logic ส่วนใหญ่ยังอยู่ที่ฝั่ง Server
 
-Angular 21 เป็นเฟรมเวิร์กที่ครบเครื่องสำหรับการพัฒนาเว็บแอปพลิเคชันขนาดใหญ่และซับซ้อน โดยมีจุดเด่นดังนี้:
+Hotwire ประกอบด้วย 3 ส่วนหลัก:
 
-- **Mature framework with batteries included:** มีฟีเจอร์พื้นฐานครบ เช่น Routing, Forms, HTTP, State Management, Testing, และ CLI
-- **Strong TypeScript-first developer experience:** ใช้ TypeScript เป็นหลัก ทำให้โค้ดปลอดภัยและอ่านง่าย
-- **Modern reactivity with signals:** ระบบ signals ใหม่ช่วยให้การจัดการ state มีประสิทธิภาพและเข้าใจง่ายขึ้น
-- **Great tooling for large teams:** มี CLI, Language Service, และ DevTools ที่ช่วยให้ทีมทำงานร่วมกันได้ดี
-- **Built-in patterns for scalability and maintainability:** มีแนวทางการออกแบบที่เหมาะกับโปรเจกต์ขนาดใหญ่และดูแลรักษาง่าย
+| ส่วนประกอบ        | หน้าที่                                                          |
+| ----------------- | ---------------------------------------------------------------- |
+| **Turbo**         | ทำให้การเปลี่ยนหน้า, การ submit form และการอัปเดตบางส่วนของหน้าเร็วขึ้น โดยไม่ต้องเขียน JS |
+| **Stimulus**      | JavaScript framework ขนาดเล็ก สำหรับเพิ่ม behavior ให้ HTML ที่มีอยู่แล้ว |
+| **Hotwire Native** | นำเว็บแอป Hotwire ไปทำเป็นแอป iOS / Android                     |
 
-> **Tip:** Angular 21 รองรับการพัฒนาแบบ Standalone Component ทำให้โครงสร้างโปรเจกต์สะอาดและลดความซับซ้อน
+ส่วน **Turbo** แบ่งย่อยเป็น:
+
+- **Turbo Drive:** เปลี่ยนหน้าโดยไม่ reload ทั้งหน้า
+- **Turbo Frames:** อัปเดตเฉพาะบางส่วนของหน้า
+- **Turbo Streams:** สั่งเพิ่ม/แก้/ลบ element หลายจุดพร้อมกัน ทั้งจาก HTTP response และ WebSocket
+
+**ทำไมต้อง Hotwire?**
+
+- **Less JavaScript:** ไม่ต้องสร้าง API + Frontend app แยก ลดโค้ดและความซับซ้อน
+- **Server is the source of truth:** Business logic, validation, authorization อยู่ที่ Rails ที่เดียว
+- **Fast by default:** ได้ความเร็วแบบ SPA จาก Turbo Drive โดยไม่ต้องตั้งค่า
+- **Built into Rails:** Rails 7+ ติดตั้ง Hotwire มาให้แล้วตั้งแต่ `rails new`
+- **Progressive enhancement:** ถ้า JS ไม่ทำงาน ฟอร์มและลิงก์ยังทำงานแบบ HTML ปกติได้
+
+> **Tip:** Hotwire ไม่ได้มาแทน React/Angular ในทุกกรณี ถ้า UI มี state ซับซ้อนมาก (เช่น editor, dashboard แบบ interactive สูง) SPA อาจเหมาะกว่า
 
 ## 3. Environment Setup
 
 **การตั้งค่าสภาพแวดล้อม:**
 
 ```bash
+ruby -v
+rails -v
 node -v
-npm -v
-npm install -g @angular/cli
-ng version
+yarn -v
+gem install rails
 ```
 
-สร้างโปรเจกต์ใหม่:
+สร้างโปรเจกต์ใหม่ด้วย **esbuild** (Rails 8 ติดตั้ง Turbo + Stimulus มาให้แล้ว):
 
 ```bash
-ng new angular-bootcamp --routing --style=scss
-cd angular-bootcamp
-npm start
+rails new hotwire-bootcamp -j esbuild
+cd hotwire-bootcamp
+bin/rails db:prepare
+bin/dev
 ```
 
-## 4. Project Structure & Architecture
+`bin/dev` จะรัน Rails server และ esbuild แบบ `--watch` พร้อมกัน (ตาม `Procfile.dev`) ทุกครั้งที่แก้ไฟล์ JS, esbuild จะ build ใหม่ไปที่ `app/assets/builds/` ให้อัตโนมัติ
 
-**โครงสร้างโปรเจ็ค Angular 21:**
+ตรวจสอบว่า Hotwire ถูกติดตั้งแล้ว:
 
-```
-my-app/
-├── node_modules/               # npm dependencies installed for the project.
-├── src/                        # The source code for your application.
-│   ├── app/                    # Contains your application's components, services, etc.
-│   │   ├── app.component.ts    # The logic for the root component.
-│   │   ├── app.component.html  # The HTML template for the root component.
-│   │   ├── app.component.scss  # The styles specific to the root component.
-│   │   └── app.config.ts       # App-level configuration (Routing, Providers).
-│   ├── assets/                 # Static assets like images, fonts, or icons.
-│   ├── index.html              # The main HTML page served to the browser.
-│   ├── main.ts                 # The main entry point; compiles the application and boots it up.
-│   └── styles.scss             # Global SCSS styles applied to the whole application.
-├── angular.json                # CLI configuration (defines build setups, project defaults, etc.).
-├── package.json                # npm configuration (lists dependencies and custom scripts).
-└── tsconfig.json               # TypeScript compiler configuration.
+```ruby
+# Gemfile
+gem "jsbundling-rails"
+gem "turbo-rails"
+gem "stimulus-rails"
 ```
 
-**Core Files Explanation**
+```json
+// package.json
+{
+  "scripts": {
+    "build": "esbuild app/javascript/*.* --bundle --sourcemap --format=esm --outdir=app/assets/builds --public-path=/assets"
+  },
+  "dependencies": {
+    "@hotwired/stimulus": "...",
+    "@hotwired/turbo-rails": "...",
+    "esbuild": "..."
+  }
+}
+```
 
-- **`src/main.ts`**: จุดเริ่มต้นของการบูตแอป
-  - เป็นไฟล์แรกที่ทำงานเมื่อแอปเริ่มต้น
-  - รับผิดชอบในการโหลด Root Component และการตั้งค่าให้กับแอป
+```js
+// app/javascript/application.js
+import "@hotwired/turbo-rails"
+import "./controllers"
+```
 
-- **`src/app/app.component.ts`**: Root Component (Standalone)
-  - เป็นคอมโพเนนต์หลักของแอป
-  - ใช้รูปแบบ Standalone ไม่ต้องพึ่ง NgModule
+```erb
+<%# app/views/layouts/application.html.erb %>
+<%= javascript_include_tag "application", "data-turbo-track": "reload", type: "module" %>
+```
 
-- **`src/app/app.component.html`**: HTML Template for Root Component
-  - เป็น Template HTML สำหรับ Root Component
-  - ใช้สำหรับเลย์เอาต์หลักและการแสดงผลข้อมูล
+**Importmap vs esbuild:**
 
-- **`src/app/app.component.scss`**: Styles for Root Component
-  - CSS/SCSS styles สำหรับ Root Component
-  - ใช้สำหรับการออกแบบ UI ของคอมโพเนนต์หลัก
+| หัวข้อ               | Importmap (default)               | esbuild                                 |
+| -------------------- | --------------------------------- | --------------------------------------- |
+| ต้องมี Node.js        | ไม่ต้อง                            | ต้อง                                     |
+| Build step           | ไม่มี                              | มี (`yarn build`)                         |
+| npm packages         | pin ผ่าน `bin/importmap pin`       | `yarn add` ได้ทุก package                 |
+| TypeScript / JSX     | ไม่รองรับ                          | รองรับ                                   |
+| เหมาะกับ             | แอปที่ใช้ JS น้อย                   | ทีมที่ใช้ npm ecosystem หรือ TypeScript    |
 
-- **`src/app/app.config.ts`**: App-level Configuration
-  - ระบุ Providers ทั้งหมดของแอป
-  - ตั้งค่า Global Configuration เช่น HTTP, Router, Services
+> **Note:** ถ้ามีโปรเจกต์ที่ใช้ importmap อยู่แล้ว เปลี่ยนเป็น esbuild ได้ด้วย `bundle add jsbundling-rails` แล้วรัน `bin/rails javascript:install:esbuild` จากนั้นลบ `importmap-rails`, `config/importmap.rb` และ `javascript_importmap_tags` ใน layout
 
-- **`src/app/app.routes.ts`**: Application Routing
-  - กำหนด Routes ทั้งหมดของแอป
-  - สนับสนุน Lazy Loading สำหรับ Feature Modules
+## 4. Project Structure
 
-## 5. CSR vs SSR
+**ไฟล์ที่เกี่ยวข้องกับ Hotwire ในโปรเจกต์ Rails 8:**
 
-- **CSR (Client Side Rendering):** กระบวนการทำงานทั้งหมดจะเกิดขึ้นที่ฝั่งผู้ใช้ (Client) ตั้งแต่การโหลดหน้าเว็บและ Execute JavaScript โดยอาศัยทรัพยากรเครื่องผู้ใช้ทั้งหมด ซึ่งจะรับไฟล์ HTML มาก่อนแล้วจึงจะมีการโหลดเนื้อหาอื่น ๆ ตามมาในภายหลัง
+```
+hotwire-bootcamp/
+├── app/
+│   ├── controllers/                  # Rails controllers (respond_to turbo_stream)
+│   ├── models/                       # Models (broadcasts)
+│   ├── views/
+│   │   ├── layouts/
+│   │   │   └── application.html.erb  # javascript_include_tag, turbo meta tags
+│   │   └── tasks/
+│   │       ├── _task.html.erb        # Partial ที่ใช้ซ้ำทั้งใน frame และ stream
+│   │       ├── index.html.erb
+│   │       └── create.turbo_stream.erb  # Turbo Stream response
+│   ├── assets/
+│   │   └── builds/                   # ไฟล์ที่ esbuild build ออกมา (ไม่ต้อง commit)
+│   └── javascript/
+│       ├── application.js            # Entry point: import Turbo + Stimulus
+│       └── controllers/              # Stimulus controllers
+│           ├── application.js        # Stimulus application instance
+│           ├── index.js              # Register controllers (generate อัตโนมัติ)
+│           └── hello_controller.js
+├── config/
+│   └── cable.yml                     # Action Cable (สำหรับ broadcast)
+├── Gemfile
+├── package.json                      # JS dependencies + build script ของ esbuild
+└── Procfile.dev                      # bin/dev: รัน Rails server + esbuild --watch
+```
 
-- **SSR (Server Side Rendering):** กระบวนการทำงานทั้งหมดจะย้ายไปที่ฝั่ง Server โดยจะทำการ Render หน้าเว็บบน Server ก่อนที่จะส่งมาให้ผู้ใช้งาน (Client) หมายความว่าหน้าเว็บที่ส่งมาให้กับผู้ใช้นั้นพร้อมใช้งานแล้ว เว็บเบราว์เซอร์สามารถนำไปแสดงผลได้ทันที ทำให้การใช้งานเว็บไซต์นั้นมีความรวดเร็วมากยิ่งขึ้น
+**คำอธิบายไฟล์สำคัญ:**
 
-![CSR-SSR](./images/csr_ssr.png)
+- **`app/javascript/application.js`**: Entry point ของ JavaScript
+  - esbuild bundle ไฟล์นี้พร้อมทุกไฟล์ที่ import ไปเป็น `app/assets/builds/application.js`
 
-## 6. SPA vs MPA
+- **`app/javascript/controllers/index.js`**: Register Stimulus controllers
+  - esbuild ไม่รองรับการโหลดไฟล์แบบ auto-load จึงต้อง import และ register controller ทีละตัว
+  - `bin/rails generate stimulus` จะอัปเดตไฟล์นี้ให้อัตโนมัติ ถ้าสร้างไฟล์ controller เอง ให้รัน `bin/rails stimulus:manifest:update`
 
-- **Single-page web applications (SPAs):** คือ application ที่สามารถใช้งานบน web browser ได้โดยไม่ต้อง reload page
-- **Multi-Page Application (MPA):** คือ application ที่สามารถใช้งานบน web browser โดยเมื่อคลิกไปที่ลิงค์ต่างๆ หน้า page จะมีการ reload ใหม่
+```js
+// app/javascript/controllers/index.js
+// This file is auto-generated by ./bin/rails stimulus:manifest:update
+import { application } from "./application"
 
-![SPA-MPA](./images/spa_mpa.png)
+import HelloController from "./hello_controller"
+application.register("hello", HelloController)
+```
 
-## 7. In-depth Guides
+- **`package.json`**: จัดการ JavaScript dependencies
+  - ติดตั้ง package ด้วย `yarn add <package>` แล้ว import ใน JS ได้เลย
 
-### Angular Signals
+- **`app/views/**/*.turbo_stream.erb`**: Template สำหรับตอบกลับเป็น Turbo Stream
+  - ใช้เมื่อต้องการอัปเดตหลายจุดในหน้าหลัง submit form
 
-คือระบบ reactive state แบบใหม่ใน Angular ที่ทำให้ UI อัปเดตเฉพาะส่วนที่จำเป็นเมื่อข้อมูลเปลี่ยน โดยไม่ต้องพึ่ง Zone.js หรือ Change Detection แบบสแกนทั้งแอป
+## 5. SPA vs HTML over the wire
 
-Signals เปลี่ยนแนวคิดจาก "ตรวจทุกอย่างตลอดเวลา" มาเป็น "อัปเดตเฉพาะจุดที่เกี่ยวข้องจริง ๆ"
+- **SPA (เช่น Angular, React):** Server ส่ง **JSON** → Browser รัน JavaScript เพื่อสร้าง HTML เอง → ต้องมี state, routing, validation ซ้ำทั้งสองฝั่ง
 
-**ทำไม Signals ดีกว่าแบบเดิม (Change Detection) ?**
+- **Hotwire:** Server render **HTML** ให้เลย → Turbo นำ HTML ที่ได้ไปแทนที่ในหน้าเว็บ → logic อยู่ที่ Server ที่เดียว
 
-ในรูปแบบเดิม Angular จะสแกน component tree ทุกครั้งที่มี event trigger เช่น click หรือ HTTP response ทำให้หลายคอมโพเนนต์ถูก re-evaluate แม้ไม่เกี่ยวกับงานในตอนนั้น แต่ Signals จะติดตาม dependency โดยตรงและอัปเดตเฉพาะส่วนที่ใช้งานข้อมูลนั้นจริง จึงลดงานที่ไม่จำเป็นและทำให้แอปรู้สึกเร็วขึ้น
+```
+SPA
+Browser ──(fetch /api/tasks)──▶ Server
+Browser ◀──── JSON ─────────── Server
+Browser: JSON → render HTML ด้วย JS framework
 
-```ts
-import { Component, signal, computed } from "@angular/core";
+Hotwire
+Browser ──(GET /tasks)───────▶ Server
+Browser ◀──── HTML ─────────── Server (render ERB)
+Turbo: เอา HTML ไปแทนที่ <body> / <turbo-frame> / target ที่กำหนด
+```
 
-@Component({
-  selector: 'app-counter',
-  template: `
-    <p>Count: {{ count() }}</p>
-    <p>Double: {{ doubleCount() }}</p>
-    <button (click)="increment()">Increment</button>
-  `,
+| หัวข้อ             | SPA                         | Hotwire                       |
+| ------------------ | --------------------------- | ----------------------------- |
+| Data format        | JSON                        | HTML                          |
+| Rendering          | Client                      | Server                        |
+| Routing            | Client + Server             | Server                        |
+| Validation         | ทั้งสองฝั่ง                  | Server                        |
+| JavaScript ที่เขียน | มาก                         | น้อย (เฉพาะ Stimulus)          |
+| เหมาะกับ           | UI ซับซ้อน, offline, mobile-first | CRUD app, admin, SaaS ทั่วไป |
+
+## 6. Turbo Drive
+
+Turbo Drive จะ **ดักทุกการคลิกลิงก์และการ submit form** แล้วส่ง request ด้วย `fetch` จากนั้นนำ `<body>` ใหม่มาแทนที่ของเดิม และ merge `<head>` ให้ **โดยไม่ reload ทั้งหน้า**
+
+ผลลัพธ์คือ CSS/JS ไม่ต้องโหลดใหม่ทุกครั้ง หน้าเว็บจึงรู้สึกเร็วเหมือน SPA
+
+**ไม่ต้องเขียนโค้ดเพิ่ม** แค่ import `@hotwired/turbo-rails` ก็ทำงานทันที
+
+### ปิด Turbo Drive เฉพาะจุด
+
+```erb
+<%= link_to "Download PDF", report_path(format: :pdf), data: { turbo: false } %>
+
+<%= form_with model: @upload, data: { turbo: false } do |f| %>
+  ...
+<% end %>
+```
+
+### Link ที่ใช้ HTTP method อื่น
+
+```erb
+<%= link_to "Delete", task_path(task),
+      data: { turbo_method: :delete, turbo_confirm: "ลบใช่ไหม?" } %>
+
+<%# แนะนำใช้ button_to สำหรับ action ที่เปลี่ยนข้อมูล %>
+<%= button_to "Delete", task_path(task), method: :delete,
+      form: { data: { turbo_confirm: "ลบใช่ไหม?" } } %>
+```
+
+### Form submission rules
+
+Turbo Drive ต้องการ response ที่ถูกต้องหลัง submit form:
+
+```ruby
+def create
+  @task = Task.new(task_params)
+
+  if @task.save
+    redirect_to tasks_path, notice: "Task created."
+  else
+    # ต้องส่ง 422 ไม่อย่างนั้น Turbo จะไม่ render error
+    render :new, status: :unprocessable_entity
+  end
+end
+
+def destroy
+  @task.destroy
+  # ใช้ 303 See Other หลัง DELETE
+  redirect_to tasks_path, status: :see_other
+end
+```
+
+### Prefetch และ Asset tracking
+
+- **Prefetch:** Turbo 8 จะ prefetch ลิงก์เมื่อ hover ทำให้คลิกแล้วแสดงผลแทบทันที
+- **`data-turbo-track="reload"`:** ถ้าไฟล์ CSS/JS เปลี่ยน (deploy ใหม่) Turbo จะ reload ทั้งหน้าอัตโนมัติ
+
+```erb
+<%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+<%= link_to "Heavy page", heavy_path, data: { turbo_prefetch: false } %>
+```
+
+### Turbo events
+
+เพราะหน้าไม่ได้ reload จริง `DOMContentLoaded` จะทำงานแค่ครั้งแรก ให้ใช้ `turbo:load` แทน (หรือดีกว่านั้นคือใช้ Stimulus)
+
+```js
+document.addEventListener("turbo:load", () => {
+  console.log("page loaded")
 })
-export class CounterComponent {
-  count = signal<number>(0);
-  doubleCount = computed(() => this.count() * 2);
+```
+
+> **Best Practice:** หลีกเลี่ยงการเขียน JS ใน `turbo:load` ให้ย้ายไปเป็น Stimulus controller ซึ่งมี `connect()` / `disconnect()` ที่ทำงานถูกต้องเสมอ
+
+## 7. Turbo Frames
+
+Turbo Frames คือการแบ่งหน้าเว็บเป็น **ส่วนย่อยที่อัปเดตแยกกันได้** ลิงก์และฟอร์มภายใน frame จะอัปเดตเฉพาะ frame นั้น ไม่ใช่ทั้งหน้า
+
+**หลักการ:** Server ส่ง HTML ทั้งหน้ากลับมา → Turbo หา `<turbo-frame>` ที่มี **id เดียวกัน** → แทนที่เฉพาะส่วนนั้น
+
+### Inline edit
+
+```erb
+<%# app/views/tasks/_task.html.erb %>
+<%= turbo_frame_tag task do %>
+  <p><%= task.title %></p>
+  <%= link_to "Edit", edit_task_path(task) %>
+<% end %>
+```
+
+```erb
+<%# app/views/tasks/edit.html.erb %>
+<h1>Edit task</h1>
+
+<%= turbo_frame_tag @task do %>
+  <%= render "form", task: @task %>
+<% end %>
+```
+
+`turbo_frame_tag task` จะสร้าง `<turbo-frame id="task_1">` ให้อัตโนมัติ (ใช้ `dom_id`)
+
+เมื่อคลิก "Edit" → Turbo โหลด `/tasks/1/edit` → ดึงเฉพาะ `<turbo-frame id="task_1">` มาแทนที่ → ได้ inline edit โดยไม่ต้องเขียน JS เลย
+
+### Lazy loading
+
+โหลดเนื้อหาทีหลัง เช่น ส่วนที่ query ช้า:
+
+```erb
+<%= turbo_frame_tag "stats", src: stats_path, loading: :lazy do %>
+  <p>Loading...</p>
+<% end %>
+```
+
+### Navigate ออกนอก frame
+
+```erb
+<%# ลิงก์นี้อยู่ใน frame แต่ต้องการเปลี่ยนทั้งหน้า %>
+<%= link_to "View", task_path(task), data: { turbo_frame: "_top" } %>
+
+<%# ให้ทุกลิงก์ใน frame เปลี่ยนทั้งหน้า %>
+<%= turbo_frame_tag "nav", target: "_top" do %>
+  ...
+<% end %>
+
+<%# อัปเดต URL ใน address bar ด้วย %>
+<%= turbo_frame_tag "results", data: { turbo_action: "advance" } do %>
+  ...
+<% end %>
+```
+
+> **Note:** ถ้า response ไม่มี frame id ที่ตรงกัน จะเห็นข้อความ **"Content missing"** ให้ตรวจว่า id ของ frame ทั้งสองหน้าตรงกัน
+
+## 8. Turbo Streams
+
+Turbo Streams ใช้เมื่อต้องการ **อัปเดตหลายจุดในหน้าพร้อมกัน** หรือแก้ element ที่ไม่ได้อยู่ใน frame
+
+Turbo Stream คือ HTML element ที่บอกว่า "ทำ action อะไร กับ element id ไหน":
+
+```html
+<turbo-stream action="prepend" target="tasks">
+  <template>
+    <div id="task_5">Buy milk</div>
+  </template>
+</turbo-stream>
+```
+
+### Actions
+
+| Action    | ผลลัพธ์                                   |
+| --------- | ----------------------------------------- |
+| `append`  | เพิ่มต่อท้ายใน target                      |
+| `prepend` | เพิ่มไว้ด้านบนใน target                    |
+| `replace` | แทนที่ target ทั้ง element                 |
+| `update`  | แทนที่เฉพาะเนื้อหาข้างใน target              |
+| `remove`  | ลบ target                                 |
+| `before`  | เพิ่มก่อน target                           |
+| `after`   | เพิ่มหลัง target                           |
+| `refresh` | สั่งให้หน้า refresh (ใช้กับ morphing)        |
+
+### ตอบกลับ Turbo Stream จาก Controller
+
+```ruby
+def create
+  @task = Task.new(task_params)
+
+  respond_to do |format|
+    if @task.save
+      format.turbo_stream  # render create.turbo_stream.erb
+      format.html { redirect_to tasks_path }
+    else
+      format.html { render :new, status: :unprocessable_entity }
+    end
+  end
+end
+```
+
+```erb
+<%# app/views/tasks/create.turbo_stream.erb %>
+<%= turbo_stream.prepend "tasks", @task %>
+<%= turbo_stream.update "task_count", Task.count %>
+<%= turbo_stream.update "flash", partial: "shared/flash", locals: { notice: "Task created." } %>
+```
+
+`turbo_stream.prepend "tasks", @task` จะ render partial `tasks/_task.html.erb` ให้อัตโนมัติ
+
+### Inline ใน controller (กรณีสั้น ๆ)
+
+```ruby
+def destroy
+  @task.destroy
+
+  respond_to do |format|
+    format.turbo_stream { render turbo_stream: turbo_stream.remove(@task) }
+    format.html { redirect_to tasks_path, status: :see_other }
+  end
+end
+```
+
+> **Best Practice:** ใส่ `format.html` ไว้เสมอเพื่อ fallback กรณีที่ไม่ได้ request ผ่าน Turbo
+
+### Frames vs Streams ใช้อันไหน?
+
+| สถานการณ์                                 | ใช้          |
+| ---------------------------------------- | ------------ |
+| อัปเดตส่วนเดียว เช่น inline edit, tabs, pagination | Turbo Frame  |
+| อัปเดตหลายจุดพร้อมกัน                       | Turbo Stream |
+| อัปเดต real-time ให้ผู้ใช้คนอื่น                | Turbo Stream + Broadcast |
+
+## 9. Broadcasting (Real-time)
+
+Turbo Streams สามารถส่งผ่าน **WebSocket (Action Cable)** ได้ ทำให้ผู้ใช้ทุกคนที่เปิดหน้าเดียวกันเห็นการเปลี่ยนแปลงทันที
+
+Rails 8 ใช้ **Solid Cable** เป็น adapter ของ Action Cable โดย default จึงไม่ต้องมี Redis
+
+### 1) Model: broadcast เมื่อข้อมูลเปลี่ยน
+
+```ruby
+class Task < ApplicationRecord
+  belongs_to :project
+
+  # create → prepend, update → replace, destroy → remove
+  broadcasts_to :project, inserts_by: :prepend
+end
+```
+
+หรือเขียนแบบ explicit:
+
+```ruby
+class Task < ApplicationRecord
+  belongs_to :project
+
+  after_create_commit  -> { broadcast_prepend_later_to project, target: "tasks" }
+  after_update_commit  -> { broadcast_replace_later_to project }
+  after_destroy_commit -> { broadcast_remove_to project }
+end
+```
+
+### 2) View: subscribe stream
+
+```erb
+<%# app/views/projects/show.html.erb %>
+<%= turbo_stream_from @project %>
+
+<div id="tasks">
+  <%= render @project.tasks %>
+</div>
+```
+
+> **Security:** Stream name ถูก sign โดย Rails ผู้ใช้จึงปลอมชื่อ stream เองไม่ได้ แต่ใครก็ตามที่เปิดหน้านั้นได้จะได้รับ broadcast ด้วย ให้ **scope stream ตามสิทธิ์** (เช่น ต่อ project หรือต่อ user) และอย่า broadcast ข้อมูล sensitive ไปยัง stream ที่ใช้ร่วมกัน
+
+> **Tip:** ใช้ method ที่ลงท้ายด้วย `_later` เพื่อ render และส่งผ่าน background job ไม่ block request
+
+## 10. Page Refresh & Morphing
+
+Turbo 8 เพิ่มแนวทางที่ง่ายขึ้น: แทนที่จะเขียน stream ทีละ action ให้ **refresh ทั้งหน้าแบบ morph** คือ Turbo จะเปรียบเทียบ DOM เก่ากับใหม่ แล้วเปลี่ยนเฉพาะส่วนที่ต่างกัน พร้อมรักษาตำแหน่ง scroll ไว้
+
+```erb
+<%# app/views/layouts/application.html.erb (ใน <head>) %>
+<%= turbo_refreshes_with method: :morph, scroll: :preserve %>
+```
+
+ใช้ร่วมกับ broadcast:
+
+```ruby
+class Task < ApplicationRecord
+  belongs_to :project
+  broadcasts_refreshes_to :project
+end
+```
+
+```erb
+<%= turbo_stream_from @project %>
+```
+
+เมื่อ task เปลี่ยน → ทุกคนที่เปิดหน้า project ได้รับคำสั่ง `refresh` → หน้าโหลด HTML ใหม่แล้ว morph เฉพาะส่วนที่ต่างกัน
+
+ป้องกันไม่ให้ element ถูก morph (เช่น form ที่ผู้ใช้กำลังพิมพ์):
+
+```erb
+<div id="draft" data-turbo-permanent>...</div>
+```
+
+> **Best Practice:** เริ่มจาก **morphing + `broadcasts_refreshes`** ก่อน เพราะเขียนน้อยที่สุด แล้วค่อยเปลี่ยนไปใช้ Turbo Stream action เฉพาะจุดเมื่อมีปัญหาเรื่อง performance
+
+## 11. Stimulus
+
+Stimulus คือ JavaScript framework ขนาดเล็กที่ **เพิ่ม behavior ให้ HTML ที่ Server render มาแล้ว** ไม่ได้ render HTML เอง
+
+แนวคิด: HTML เป็นตัวบอกว่าจะใช้ controller อะไร ผ่าน `data-*` attributes
+
+### Core concepts
+
+| Concept        | Attribute                              | หน้าที่                            |
+| -------------- | -------------------------------------- | -------------------------------- |
+| **Controller** | `data-controller="counter"`            | ผูก JS class กับ element          |
+| **Action**     | `data-action="click->counter#increment"` | ผูก event กับ method              |
+| **Target**     | `data-counter-target="output"`         | อ้างอิง element ภายใน controller  |
+| **Value**      | `data-counter-count-value="0"`         | ส่งข้อมูลจาก HTML เข้า controller  |
+| **Class**      | `data-counter-active-class="is-active"` | ส่งชื่อ CSS class เข้า controller |
+| **Outlet**     | `data-counter-modal-outlet="#modal"`   | อ้างอิง controller อื่น            |
+
+### ตัวอย่าง: Counter
+
+สร้าง controller:
+
+```bash
+bin/rails generate stimulus counter
+```
+
+คำสั่งนี้จะสร้าง `counter_controller.js` และ register ใน `controllers/index.js` ให้อัตโนมัติ
+
+```js
+// app/javascript/controllers/counter_controller.js
+import { Controller } from "@hotwired/stimulus"
+
+export default class extends Controller {
+  static targets = ["output"]
+  static values = { count: { type: Number, default: 0 } }
 
   increment() {
-    this.count.update((v) => v + 1);
+    this.countValue++
+  }
+
+  // ทำงานอัตโนมัติเมื่อ countValue เปลี่ยน
+  countValueChanged() {
+    this.outputTarget.textContent = this.countValue
   }
 }
 ```
 
-> **Best Practice:** ใช้ signals สำหรับ state ภายในคอมโพเนนต์ และใช้ RxJS สำหรับ async data หรือ global state
-
-## 8. Components
-
-เป็นส่วนประกอบเป็นองค์ประกอบพื้นฐานในการสร้าง Application ใน Angular หน้าที่ของผู้พัฒนาก็คือการสร้าง Component ของตัวเองขึ้นมาแล้วเอามาประกอบกันในหน้าเว็บ ซึ่งที่ Angular แนะนำให้แบ่งโครงสร้างและจัดระเบียบเป็น component ย่อยๆ เพื่อที่จะให้ในแต่ละส่วนทำวงานอย่างเต็มประสิทธิภาพและบำรุงรักษาได้ง่าย
-
-### Component selector
-
-คือ “ชื่อ tag” ที่ใช้เรียก component ใน HTML ของ Angular
-
-```ts
-@Component({
-  selector: "app-book-list",
-  template: `<h1>Books</h1>`,
-})
-export class BookListComponent {}
+```erb
+<div data-controller="counter" data-counter-count-value="5">
+  <p>Count: <span data-counter-target="output"></span></p>
+  <button data-action="click->counter#increment">Increment</button>
+</div>
 ```
 
-```html
-<app-book-list></app-book-list>
-```
+### Lifecycle
 
-### Styling components
+```js
+export default class extends Controller {
+  connect() {
+    // element ถูกเพิ่มเข้า DOM (รวมถึงหลัง Turbo เปลี่ยนหน้า)
+  }
 
-คือการ “กำหนด style ให้ component” ใน Angular โดยจะมีการเขียน 2 แบบ
-
-```ts
-@Component({
-  selector: "profile-photo",
-  template: `<img src="profile-photo.jpg" alt="Your profile photo" />`,
-  styles: `
-    img {
-      border-radius: 50%;
-    }
-  `,
-})
-export class ProfilePhoto {}
-```
-
-```ts
-@Component({
-  selector: "profile-photo",
-  templateUrl: "profile-photo.html",
-  styleUrl: "profile-photo.css",
-})
-export class ProfilePhoto {}
-```
-
-### Accepting data with input properties
-
-คือการรับข้อมูลจาก parent component เข้ามาใน child component
-
-```ts
-import { Component, input } from "@angular/core";
-
-@Component({
-  selector: "app-user-card",
-  template: `<h1>{{ name() }}</h1>`,
-})
-export class UserCardComponent {
-  public name = input<string | null>(null);
+  disconnect() {
+    // element ถูกลบออกจาก DOM: clear timer, remove listener ที่นี่
+  }
 }
 ```
 
-```html
-<app-user-card [name]="'John'"></app-user-card>
-```
+### ตัวอย่าง: Auto-submit form
 
-### Custom events with outputs
+```js
+// app/javascript/controllers/auto_submit_controller.js
+import { Controller } from "@hotwired/stimulus"
 
-คือการส่ง event จาก child component กลับไปหา parent component
-
-```ts
-import { Component, output } from "@angular/core";
-
-@Component({
-  selector: "app-child",
-  template: ` <button (click)="submit()">Submit</button> `,
-})
-export class ChildComponent {
-  countChanged = output<number>();
-
+export default class extends Controller {
   submit() {
-    this.countChanged.emit(100);
+    this.element.requestSubmit()
   }
 }
 ```
 
-```html
-<app-child (countChanged)="onChanged($event)"></app-child>
+```erb
+<%= form_with model: task, data: { controller: "auto-submit" } do |f| %>
+  <%= f.check_box :completed, data: { action: "change->auto-submit#submit" } %>
+<% end %>
 ```
 
-```ts
-import { Component } from "@angular/core";
-import { ChildComponent } from "./child.component";
+### ตัวอย่าง: Reset form หลัง submit สำเร็จ
 
-@Component({
-  selector: "app-parent",
-  imports: [ChildComponent],
-  template: `
-    <h2>Parent Component</h2>
-    <app-child (countChanged)="onChanged($event)"></app-child>
-  `,
-})
-export class ParentComponent {
-  onChanged(count: number) {
-    console.log("Received from child:", count);
+ฟัง Turbo event ได้โดยตรงจาก `data-action`:
+
+```js
+// app/javascript/controllers/reset_form_controller.js
+import { Controller } from "@hotwired/stimulus"
+
+export default class extends Controller {
+  reset(event) {
+    if (event.detail.success) this.element.reset()
   }
 }
 ```
 
-Summary
+```erb
+<%= form_with model: Task.new,
+      data: { controller: "reset-form", action: "turbo:submit-end->reset-form#reset" } do |f| %>
+  ...
+<% end %>
+```
+
+> **Best Practice:** เขียน controller ให้เล็กและ reusable (เช่น `auto-submit`, `clipboard`, `toggle`) แทนการเขียน controller ผูกกับหน้าใดหน้าหนึ่ง
+
+## 12. Workshop: Task App
+
+สร้าง Task app ที่มี inline edit, เพิ่มงานโดยไม่ reload, toggle สถานะ และ real-time
+
+### ER Diagram
+
+Workshop นี้ใช้ตารางเดียวคือ `tasks`:
+
+```mermaid
+erDiagram
+  TASK {
+    bigint id PK
+    string title "required (validates presence)"
+    boolean completed "default: false"
+    datetime created_at
+    datetime updated_at
+  }
+```
+
+**ต่อยอด:** ตัวอย่างในหัวข้อ [Broadcasting](#9-broadcasting-real-time) และ [Page Refresh & Morphing](#10-page-refresh--morphing) ใช้ `Project` ที่มีหลาย `Task` และผูกกับ `User` เพื่อ scope stream ตามเจ้าของ:
+
+```mermaid
+erDiagram
+  USER ||--o{ PROJECT : owns
+  PROJECT ||--o{ TASK : has
+
+  USER {
+    bigint id PK
+    string email_address "unique"
+  }
+  PROJECT {
+    bigint id PK
+    bigint user_id FK
+    string name
+  }
+  TASK {
+    bigint id PK
+    bigint project_id FK
+    string title
+    boolean completed
+  }
+```
+
+| Relationship        | Rails association                                             | Turbo stream                              |
+| ------------------- | ------------------------------------------------------------- | ----------------------------------------- |
+| User → Projects     | `User has_many :projects` / `Project belongs_to :user`        | `turbo_stream_from current_user, :projects` |
+| Project → Tasks     | `Project has_many :tasks` / `Task belongs_to :project`        | `turbo_stream_from @project`              |
 
 ```bash
-Parent → ส่ง data → Child (input)
-
-Child → ส่ง event → Parent (output)
+bin/rails generate model Project user:references name:string
+bin/rails generate model Task project:references title:string completed:boolean
 ```
 
-### Component Lifecycle
+> **Note:** `references` สร้าง foreign key และ index ให้อัตโนมัติ ส่วน `completed` ควรตั้ง `default: false, null: false` ใน migration
 
-| Phase            | Method                  | Summary                                                                                                                                                                                            |
-| ---------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Creation         | `constructor`           | Standard JavaScript class constructor. Runs when Angular instantiates the component. <br> <span style="color:#0f172a">(คอนสตรัคเตอร์ของคลาส เรียกเมื่อ Angular สร้างอินสแตนซ์ของคอมโพเนนต์)</span> |
-| Change Detection | `ngOnInit`              | Runs once after Angular has initialized all the component's inputs. <br> <span style="color:#0f172a">(ทำงานครั้งเดียวหลังจากอินพุตของคอมโพเนนต์ถูกกำหนดค่าเสร็จ)</span>                            |
-| Change Detection | `ngOnChanges`           | Runs every time the component's inputs have changed. <br> <span style="color:#0f172a">(ทำงานทุกครั้งที่อินพุตของคอมโพเนนต์มีการเปลี่ยนแปลง)</span>                                                 |
-| Change Detection | `ngDoCheck`             | Runs every time this component is checked for changes. <br> <span style="color:#0f172a">(ทำงานทุกครั้งที่ Angular ตรวจสอบการเปลี่ยนแปลงของคอมโพเนนต์นี้)</span>                                    |
-| Change Detection | `ngAfterContentInit`    | Runs once after the component's content has been initialized. <br> <span style="color:#0f172a">(ทำงานครั้งเดียวหลังจากเนื้อหา content projection ถูกกำหนดค่าเสร็จ)</span>                          |
-| Change Detection | `ngAfterContentChecked` | Runs every time this component content has been checked for changes. <br> <span style="color:#0f172a">(ทำงานทุกครั้งที่เนื้อหา content projection ถูกตรวจสอบการเปลี่ยนแปลง)</span>                 |
-| Change Detection | `ngAfterViewInit`       | Runs once after the component's view has been initialized. <br> <span style="color:#0f172a">(ทำงานครั้งเดียวหลังจาก view ของคอมโพเนนต์ถูกสร้างเสร็จ)</span>                                        |
-| Change Detection | `ngAfterViewChecked`    | Runs every time the component's view has been checked for changes. <br> <span style="color:#0f172a">(ทำงานทุกครั้งที่ view ของคอมโพเนนต์ถูกตรวจสอบการเปลี่ยนแปลง)</span>                           |
-| Rendering        | `afterNextRender`       | Runs once the next time that all components have been rendered to the DOM. <br> <span style="color:#0f172a">(ทำงานหนึ่งครั้งหลังจากทุกคอมโพเนนต์ถูกเรนเดอร์ลง DOM รอบถัดไป)</span>                 |
-| Rendering        | `afterEveryRender`      | Runs every time all components have been rendered to the DOM. <br> <span style="color:#0f172a">(ทำงานทุกครั้งหลังจากทุกคอมโพเนนต์ถูกเรนเดอร์ลง DOM)</span>                                         |
-| Destruction      | `ngOnDestroy`           | Runs once before the component is destroyed. <br> <span style="color:#0f172a">(ทำงานครั้งเดียวก่อนที่คอมโพเนนต์จะถูกทำลาย)</span>                                                                  |
-
-## 9. Template syntax
-
-### Render dynamic text with text interpolation
-
-คือการแสดงข้อมูล dynamic ใน template
-
-```ts
-@Component({
-  template: `
-    <p>Your color preference is {{ theme() }}.</p>
-  `,
-  ...
-})
-export class App {
-  theme = signal<string>('dark');
-}
-```
-
-### Adding event listeners
-
-คือการเพิ่มตัวดักจับ event
-
-```ts
-@Component({
-  template: `
-    <input type="text" (keyup)="updateField()" />
-  `,
-  ...
-})
-export class App{
-  public updateField(): void {
-    console.log('Field is updated!');
-  }
-}
-```
-
-### Two-way binding
-
-คือการ “ผูกข้อมูลสองทาง” ระหว่าง component <=> UI
-
-```ts
-import { Component } from "@angular/core";
-import { FormsModule } from "@angular/forms";
-@Component({
-  imports: [FormsModule],
-  template: `
-    <main>
-      <h2>Hello {{ firstName }}!</h2>
-      <input type="text" [(ngModel)]="firstName" />
-    </main>
-  `,
-})
-export class App {
-  firstName = "Ada";
-}
-```
-
-### Control flow
-
-คือการควบคุมการทำงานหรือการแสดงผลตามเงื่อนไข
-
-```html
-@if (a > b) {
-  <p>{{ a }} is greater than {{ b }}</p>
-}
-
-@if (a > b) {
-  {{ a }} is greater than {{ b }}
-} @else {
-  {{ a }} is equal to {{ b }}
-}
-
-@for (item of items; track item.id) {
-  {{ item.name }}
-}
-
-@switch (userPermissions) {
-  @case ('admin') {
-    <app-admin-dashboard />
-  }
-  @case ('reviewer') {
-    <app-editor-dashboard />
-  }
-  @case ('editor') {
-    <app-editor-dashboard />
-  }
-  @default {
-    <app-viewer-dashboard />
-  }
-}
-```
-
-### Pipes
-
-คือ feature ใน Angular ที่ใช้ “แปลงหรือ format ข้อมูลก่อนแสดงผลใน template”
-
-```html
-<main>
-  <!-- Transform the company name to title-case and transform the purchasedOn date to a locale-formatted string -->
-  <h1>Purchases from {{ company | titlecase }} on {{ purchasedOn | date }}</h1>
-  <!-- Transform the amount to a currency-formatted string -->
-  <p>Total: {{ amount | currency }}</p>
-</main>
-
-<main>
-  <h1>Purchases from Acme Corporation on Jul 8, 2024</h1>
-  <p>Total: $123.45</p>
-</main>
-```
-
-```ts
-import { Component } from "@angular/core";
-import { CurrencyPipe, DatePipe, TitleCasePipe } from "@angular/common";
-@Component({
-  selector: "app-root",
-  imports: [CurrencyPipe, DatePipe, TitleCasePipe],
-  templateUrl: "app.component.html",
-})
-export class ShoppingCart {
-  amount = 123.45;
-  company = "acme corporation";
-  purchasedOn = "2024-07-08";
-}
-```
-
-## 10. Built-in directives
-
-คือ “คำสั่งพิเศษที่ Angular ใช้ควบคุม HTML หรือ DOM”
-
-### NgClass
-
-คือ directive ใน Angular ที่ใช้ “เพิ่ม/ลบ CSS class แบบ dynamic”
-
-```html
-<some-element [class]="'first second'">...</some-element>
-<some-element [class.expanded]="isExpanded">...</some-element>
-<some-element [class]="['first', 'second']">...</some-element>
-<some-element [class]="{'first': true, 'second': true, 'third': false}"
-  >...</some-element
->
-```
-
-### NgStyle
-
-คือ directive ใน Angular ที่ใช้ “กำหนด CSS style แบบ dynamic”
-
-```html
-<some-element [ngStyle]="{'max-width.px': widthExp}">...</some-element>
-```
-
-### NgModel
-
-คือ directive ใน Angular ที่ใช้ทำ: [Two-way binding](#two-way-binding)
-
-## 11. Angular Routing
-
-คือการกำหนดเส้นทาง (URL Path) ของแอป ว่าเมื่อผู้ใช้เข้า URL ไหน ให้แสดงหน้าไหนหรือ component อะไร
-
-```ts
-import { Routes } from "@angular/router";
-import { HomePage } from "./home-page";
-import { AdminPage } from "./admin-page";
-export const routes: Routes = [
-  {
-    path: "",
-    component: HomePage,
-  },
-  {
-    path: "admin",
-    component: AdminPage,
-  },
-];
-```
-
-### Show routes with outlets
-
-คือการแสดงผล component ตาม route ผ่าน `<router-outlet>`
-ใน Angular router-outlet เป็นตำแหน่งที่ Angular จะเอา component ของ route ปัจจุบันมา render
-
-```html
-<app-header />
-<router-outlet />
-<app-footer />
-```
-
-```ts
-import { Component } from "@angular/core";
-import { RouterOutlet } from "@angular/router";
-@Component({
-  selector: "app-root",
-  imports: [RouterOutlet],
-  templateUrl: "./app.html",
-  styleUrl: "./app.css",
-})
-export class App {}
-```
-
-```ts
-import { Routes } from "@angular/router";
-import { Home } from "./home";
-import { Products } from "./products";
-const routes: Routes = [
-  {
-    path: "",
-    component: Home,
-    title: "Home Page",
-  },
-  {
-    path: "products",
-    component: Products,
-    title: "Our Products",
-  },
-];
-```
-
-### Navigate to routes
-
-คือการเปลี่ยนหน้า (route) ไปยัง URL อื่นใน Angular
-
-```html
-<nav>
-  <a routerLink="/user-profile">User profile</a>
-  <a routerLink="/settings">Settings</a>
-
-  <!-- Navigates user to /dashboard -->
-  <a routerLink="dashboard">Dashboard</a>
-  <a [routerLink]="['dashboard']">Dashboard</a>
-
-  <a [routerLink]="['user', currentUserId]">Current User</a>
-</nav>
-```
-
-```ts
-import { RouterLink } from "@angular/router";
-@Component({
-  templateUrl: "./app.component.html",
-  imports: [RouterLink],
-})
-export class App {}
-```
-
-```ts
-import { Router } from "@angular/router";
-@Component({
-  selector: "app-dashboard",
-  template: ` <button (click)="navigateToProfile()">View Profile</button> `,
-})
-export class AppDashboard {
-  private router = inject(Router);
-  navigateToProfile() {
-    // Standard navigation
-    this.router.navigate(["/profile"]);
-    // With route parameters
-    this.router.navigate(["/users", userId]);
-    // With query parameters
-    this.router.navigate(["/search"], {
-      queryParams: { category: "books", sort: "price" },
-    });
-    // With matrix parameters
-    this.router.navigate(["/products", { featured: true, onSale: true }]);
-  }
-}
-```
-
-### Read route state
-
-คือการอ่านข้อมูลของ route ปัจจุบันใน Angular
-
-```ts
-import { Component, signal, inject } from "@angular/core";
-import { ActivatedRoute } from "@angular/router";
-
-@Component({
-  selector: "app-product",
-})
-export class Product {
-  private activatedRoute = inject(ActivatedRoute);
-  productId = signal<string>('');
-
-  constructor() {
-    this.activatedRoute.params.subscribe((params) => {
-      this.productId.set(params["id"]);
-    });
-  }
-}
-```
-
-### Redirecting Routes
-
-คือการเปลี่ยนเส้นทางจาก route หนึ่งไปอีก route หนึ่งอัตโนมัติใน Angular
-
-```ts
-import { Routes } from "@angular/router";
-
-const routes: Routes = [
-  // Simple redirect
-  { path: "marketing", redirectTo: "newsletter" },
-  // Redirect with path parameters
-  { path: "legacy-user/:id", redirectTo: "users/:id" },
-  // Redirect any other URLs that don’t match
-  // (also known as a "wildcard" redirect)
-  { path: "**", redirectTo: "/login" },
-];
-```
-
-### Route Guards
-
-Route Guards ใช้ควบคุมสิทธิ์การเข้าถึง route ประเภทที่ใช้บ่อยได้แก่:
-
-| Guard              | หน้าที่                                          |
-| ------------------ | ------------------------------------------------ |
-| `CanActivate`      | ป้องกันการเข้าถึง route                          |
-| `CanDeactivate`    | ป้องกันการออกจาก route (เช่น มี unsaved changes) |
-| `CanActivateChild` | ป้องกันการเข้าถึง child routes                   |
-| `Resolve`          | โหลดข้อมูลก่อนเข้า route                         |
-
-### CanActivate Guard
-
-```ts
-import { CanActivateFn, Router } from "@angular/router";
-import { inject } from "@angular/core";
-import { AuthService } from "../services/auth.service";
-
-export const authGuard: CanActivateFn = () => {
-  const router = inject(Router);
-  const authService = inject(AuthService);
-
-  if (authService.isLoggedIn()) {
-    return true;
-  }
-
-  return router.createUrlTree(["/login"]);
-};
-```
-
-### CanDeactivate Guard
-
-```ts
-import { CanDeactivateFn } from "@angular/router";
-
-export interface CanDeactivateComponent {
-  hasUnsavedChanges(): boolean;
-}
-
-export const unsavedChangesGuard: CanDeactivateFn<CanDeactivateComponent> = (
-  component,
-) => {
-  if (component.hasUnsavedChanges()) {
-    return confirm("You have unsaved changes. Leave anyway?");
-  }
-  return true;
-};
-```
-
-ลงทะเบียน Guards ใน `app.routes.ts`:
-
-```ts
-import { Routes } from "@angular/router";
-import { authGuard } from "./guards/auth.guard";
-import { unsavedChangesGuard } from "./guards/unsaved-changes.guard";
-import { DashboardComponent } from "./dashboard/dashboard.component";
-import { EditProfileComponent } from "./edit-profile/edit-profile.component";
-
-export const routes: Routes = [
-  {
-    path: "dashboard",
-    component: DashboardComponent,
-    canActivate: [authGuard],
-  },
-  {
-    path: "edit-profile",
-    component: EditProfileComponent,
-    canActivate: [authGuard],
-    canDeactivate: [unsavedChangesGuard],
-  },
-];
-```
-
-## 12. Forms in Angular
-
-### Reactive Forms
-
-คือระบบจัดการฟอร์ม เช่น รับ input จากผู้ใช้ validation submit data bind data กับ component
-
-```html
-<form [formGroup]="profileForm" (ngSubmit)="submit()">
-  <label> Name: <input formControlName="name" /> </label>
-  <label> Email: <input formControlName="email" type="email" /> </label>
-
-  <button type="submit" [disabled]="profileForm.invalid">Submit</button>
-</form>
-```
-
-```ts
-import { Component } from "@angular/core";
-import { FormBuilder, Validators, FormGroup, ReactiveFormsModule } from "@angular/forms";
-
-@Component({
-  selector: "app-profile-form",
-  imports: [ReactiveFormsModule],
-  templateUrl: "app.component.html",
-})
-export class ProfileFormComponent {
-  profileForm!: FormGroup;
-
-  constructor(private fb: FormBuilder) {
-    this.profileForm = this.fb.group({
-      name: ["", [Validators.required, Validators.minLength(2)]],
-      email: ["", [Validators.required, Validators.email]],
-    });
-  }
-
-  public submit() {
-    if (this.profileForm.valid) {
-      console.log(this.profileForm.value);
-    }
-  }
-}
-```
-
-## 13. HTTP Client and Data Layer
-
-ใน Angular 21 การใช้งาน HttpClient สำหรับติดต่อ API ในโปรเจกต์แบบ Standalone จำเป็นต้องเปิดใช้งานผ่าน provideHttpClient โดยเพิ่มไว้ใน providers ของระดับแอปภายในไฟล์ app.config.ts
-
-```ts
-import { ApplicationConfig } from "@angular/core";
-import { provideHttpClient } from "@angular/common/http";
-import { provideRouter } from "@angular/router";
-import { routes } from "./app.routes";
-
-export const appConfig: ApplicationConfig = {
-  providers: [provideRouter(routes), provideHttpClient()],
-};
-```
-
-```ts
-import { Injectable } from "@angular/core";
-import { HttpClient } from "@angular/common/http";
-import { Observable } from "rxjs";
-
-@Injectable({ providedIn: "root" })
-export class UserService {
-  constructor(private http: HttpClient) {}
-
-  getUsers(): Observable<User[]> {
-    return this.http.get<User[]>("/api/users");
-  }
-}
-```
-
-**การใช้งานใน component:**
-
-```html
-<ul>
-  @for (user of users(); track user.id) {
-  <li>{{ user.name }}</li>
-  }
-</ul>
-```
-
-```ts
-import { Component, OnInit, signal } from "@angular/core";
-import { UserService } from "./user.service";
-import { User } from "./models/user.model";
-
-@Component({
-  selector: "app-user-list",
-  templateUrl: "app.component.html",
-})
-export class UserListComponent implements OnInit {
-  users = signal<User[]>([]);
-
-  constructor(private userService: UserService) {}
-
-  ngOnInit() {
-    this.userService.getUsers().subscribe({
-      next: (users) => {
-        this.users.set(users);
-      },
-    });
-  }
-}
-```
-
-## 14. Angular Interfaces
-
-ใน Angular ใช้ TypeScript Interface เพื่อกำหนดรูปแบบของข้อมูล (data shape) ให้ชัดเจน ช่วยให้โค้ดปลอดภัยจาก type error และอ่านง่ายขึ้น
-
-```ts
-// src/app/models/user.model.ts
-export interface User {
-  id: number;
-  name: string;
-  email: string;
-  role: "admin" | "editor" | "viewer";
-}
-```
-
-```ts
-// src/app/models/product.model.ts
-export interface Product {
-  id: number;
-  name: string;
-  price: number;
-  inStock: boolean;
-}
-```
-
-การใช้งาน Interface ใน Service:
-
-```ts
-import { Injectable } from "@angular/core";
-import { HttpClient } from "@angular/common/http";
-import { Observable } from "rxjs";
-import { User } from "../models/user.model";
-
-@Injectable({ providedIn: "root" })
-export class UserService {
-  constructor(private http: HttpClient) {}
-
-  getUsers(): Observable<User[]> {
-    return this.http.get<User[]>("/api/users");
-  }
-
-  getUserById(id: number): Observable<User> {
-    return this.http.get<User>(`/api/users/${id}`);
-  }
-}
-```
-
-> **Best Practice:** สร้างโฟลเดอร์ `src/app/models/` แยกไว้สำหรับ Interface ทุกตัว เพื่อให้นำกลับมาใช้ซ้ำได้ง่าย
-
----
-
-## 15. Environments
-
-ใน Angular ใช้ environment files เพื่อแยกค่า config สำหรับแต่ละสภาพแวดล้อม เช่น development, staging, production
-
-```
-src/
-└── environments/
-    ├── environment.ts          # Development
-    └── environment.prod.ts     # Production
-```
-
-```ts
-export const environment = {
-  production: false,
-  apiUrl: "http://localhost:3000/api",
-};
-```
-
-```ts
-export const environment = {
-  production: true,
-  apiUrl: "https://myapp.com/api",
-};
-```
-
-การใช้งานใน Service:
-
-```ts
-import { Injectable } from "@angular/core";
-import { HttpClient } from "@angular/common/http";
-import { environment } from "../../environments/environment";
-import { Observable } from "rxjs";
-import { User } from "../models/user.model";
-
-@Injectable({ providedIn: "root" })
-export class UserService {
-  private apiUrl = environment.apiUrl;
-
-  constructor(private http: HttpClient) {}
-
-  getUsers(): Observable<User[]> {
-    return this.http.get<User[]>(`${this.apiUrl}/users`);
-  }
-}
-```
-
-การ build สำหรับ production:
+### Step 1: Scaffold
 
 ```bash
-ng build --configuration=production
+bin/rails generate scaffold Task title:string completed:boolean
 ```
 
-> Angular CLI จะ swap `environment.ts` เป็น `environment.prod.ts` โดยอัตโนมัติตาม `angular.json`
+แก้ migration ให้ `completed` มีค่า default ก่อน migrate:
 
----
-
-## 16. HTTP Interceptors
-
-Interceptors คือ middleware สำหรับ HTTP requests/responses ใน Angular ใช้สำหรับ:
-
-- เพิ่ม Authorization Header อัตโนมัติ
-- Handle errors แบบ global
-- Log requests
-- แสดง loading spinner
-
-```ts
-// src/app/interceptors/auth.interceptor.ts
-import { HttpInterceptorFn } from "@angular/common/http";
-
-export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  const token = localStorage.getItem("token");
-
-  if (token) {
-    const authReq = req.clone({
-      headers: req.headers.set("Authorization", `Bearer ${token}`),
-    });
-    return next(authReq);
-  }
-
-  return next(req);
-};
+```ruby
+# db/migrate/xxxxxxxxxxxxxx_create_tasks.rb
+t.boolean :completed, default: false, null: false
 ```
 
-```ts
-// src/app/interceptors/error.interceptor.ts
-import { HttpInterceptorFn } from "@angular/common/http";
-import { catchError, throwError } from "rxjs";
-
-export const errorInterceptor: HttpInterceptorFn = (req, next) => {
-  return next(req).pipe(
-    catchError((error) => {
-      if (error.status === 401) {
-        console.error("Unauthorized - redirecting to login");
-      }
-      return throwError(() => error);
-    }),
-  );
-};
+```bash
+bin/rails db:migrate
 ```
 
-ลงทะเบียน Interceptors ใน `app.config.ts`:
+### Step 2: Partial ที่ครอบด้วย Frame
 
-```ts
-import { ApplicationConfig } from "@angular/core";
-import { provideHttpClient, withInterceptors } from "@angular/common/http";
-import { provideRouter } from "@angular/router";
-import { routes } from "./app.routes";
-import { authInterceptor } from "./interceptors/auth.interceptor";
-import { errorInterceptor } from "./interceptors/error.interceptor";
+```erb
+<%# app/views/tasks/_task.html.erb %>
+<%= turbo_frame_tag task do %>
+  <div>
+    <%= form_with model: task, data: { controller: "auto-submit" } do |f| %>
+      <%= f.check_box :completed, data: { action: "change->auto-submit#submit" } %>
+    <% end %>
 
-export const appConfig: ApplicationConfig = {
-  providers: [
-    provideRouter(routes),
-    provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
-  ],
-};
+    <span><%= task.title %></span>
+
+    <%= link_to "Edit", edit_task_path(task) %>
+    <%= button_to "Delete", task, method: :delete,
+          form: { data: { turbo_confirm: "ลบใช่ไหม?" } } %>
+  </div>
+<% end %>
 ```
 
-> **Note:** Angular 21 ใช้ functional interceptors (`HttpInterceptorFn`) แทน class-based interceptors
+### Step 3: Index พร้อมฟอร์มสร้างงานและ stream
 
-## 17. Recommended Tooling
+```erb
+<%# app/views/tasks/index.html.erb %>
+<%= turbo_stream_from "tasks" %>
 
-- Angular Language Service
-- ESLint + Prettier
-- Husky + lint-staged
-- Vitest or Jasmine/Karma (team standard)
-- Playwright or Cypress for E2E
+<h1>Tasks</h1>
 
-## 18. Resources
+<%= turbo_frame_tag "new_task" do %>
+  <%= render "form", task: Task.new %>
+<% end %>
 
-- Angular Docs: https://angular.dev
-- Angular CLI Reference: https://angular.dev/tools/cli
-- RxJS Docs: https://rxjs.dev
-- TypeScript Docs: https://www.typescriptlang.org/docs/
+<div id="tasks">
+  <%= render @tasks %>
+</div>
+```
+
+### Step 4: Controller
+
+```ruby
+class TasksController < ApplicationController
+  before_action :set_task, only: %i[show edit update destroy]
+
+  def index
+    @tasks = Task.order(created_at: :desc)
+  end
+
+  def create
+    @task = Task.new(task_params)
+
+    respond_to do |format|
+      if @task.save
+        format.turbo_stream
+        format.html { redirect_to tasks_path, notice: "Task created." }
+      else
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.update("new_task", partial: "tasks/form", locals: { task: @task }),
+                 status: :unprocessable_entity
+        end
+        format.html { render :new, status: :unprocessable_entity }
+      end
+    end
+  end
+
+  def update
+    if @task.update(task_params)
+      redirect_to @task  # show.html.erb render _task ซึ่งมี frame id เดียวกัน
+    else
+      render :edit, status: :unprocessable_entity
+    end
+  end
+
+  def destroy
+    @task.destroy
+
+    respond_to do |format|
+      format.turbo_stream { render turbo_stream: turbo_stream.remove(@task) }
+      format.html { redirect_to tasks_path, status: :see_other }
+    end
+  end
+
+  private
+
+  def set_task
+    @task = Task.find(params.expect(:id))
+  end
+
+  def task_params
+    params.expect(task: %i[title completed])
+  end
+end
+```
+
+```erb
+<%# app/views/tasks/create.turbo_stream.erb %>
+<%= turbo_stream.prepend "tasks", @task %>
+<%= turbo_stream.update "new_task", partial: "tasks/form", locals: { task: Task.new } %>
+```
+
+```erb
+<%# app/views/tasks/show.html.erb %>
+<%= render @task %>
+```
+
+### Step 5: Real-time
+
+```ruby
+class Task < ApplicationRecord
+  validates :title, presence: true
+
+  broadcasts_to ->(_task) { "tasks" }, inserts_by: :prepend
+end
+```
+
+เปิด 2 browser แล้วลองเพิ่ม/แก้/ลบ task จะเห็นการเปลี่ยนแปลงทั้งสองหน้าทันที
+
+> **Note:** ถ้า element ที่ id เดียวกันมีอยู่แล้ว `append` / `prepend` จะแทนที่ของเดิม จึงไม่เกิด task ซ้ำในหน้าของคนที่สร้าง
+
+> **Security:** stream `"tasks"` ในตัวอย่างนี้ทุกคนเห็นเหมือนกัน ในงานจริงให้ scope ตาม owner เช่น `broadcasts_to ->(task) { [task.user, :tasks] }` และ `turbo_stream_from current_user, :tasks`
+
+## 13. Testing
+
+Rails ใช้ **Minitest** เป็น default และ `turbo-rails` มี assertion สำหรับ Turbo มาให้แล้ว ไม่ต้องติดตั้งอะไรเพิ่ม
+
+```bash
+bin/rails test          # รัน unit + integration tests
+bin/rails test:system   # รัน system tests (ใช้ browser จริง)
+```
+
+### Integration test: Turbo Stream response
+
+ทดสอบว่า controller ตอบ Turbo Stream ถูกต้อง โดยใช้ `as: :turbo_stream` และ `assert_turbo_stream`:
+
+```ruby
+# test/controllers/tasks_controller_test.rb
+require "test_helper"
+
+class TasksControllerTest < ActionDispatch::IntegrationTest
+  test "create prepends the new task via turbo stream" do
+    assert_difference("Task.count", 1) do
+      post tasks_url, params: { task: { title: "Buy milk" } }, as: :turbo_stream
+    end
+
+    assert_turbo_stream action: :prepend, target: "tasks" do
+      assert_select "template", text: /Buy milk/
+    end
+  end
+
+  test "create returns 422 when title is blank" do
+    assert_no_difference("Task.count") do
+      post tasks_url, params: { task: { title: "" } }, as: :turbo_stream
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "destroy removes the task via turbo stream" do
+    task = tasks(:one)
+
+    delete task_url(task), as: :turbo_stream
+
+    assert_turbo_stream action: :remove, target: task
+  end
+
+  test "destroy redirects with 303 for HTML requests" do
+    delete task_url(tasks(:one))
+
+    assert_redirected_to tasks_url
+    assert_response :see_other
+  end
+end
+```
+
+### Model test: Broadcast
+
+ทดสอบว่า model broadcast ไปยัง stream ที่ถูกต้อง ด้วย `Turbo::Broadcastable::TestHelper`:
+
+```ruby
+# test/models/task_test.rb
+require "test_helper"
+
+class TaskTest < ActiveSupport::TestCase
+  include Turbo::Broadcastable::TestHelper
+
+  test "broadcasts to the tasks stream when created" do
+    perform_enqueued_jobs do
+      Task.create!(title: "Buy milk")
+    end
+
+    assert_turbo_stream_broadcasts "tasks"
+  end
+end
+```
+
+> **Note:** ใช้ `perform_enqueued_jobs` เพราะ `broadcasts_to` ส่ง broadcast ผ่าน background job (`_later`)
+
+### System test
+
+ใช้ทดสอบ flow ที่ต้องรัน JavaScript จริง (Turbo + Stimulus):
+
+```ruby
+# test/application_system_test_case.rb
+require "test_helper"
+
+class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
+  driven_by :selenium, using: :headless_chrome, screen_size: [1400, 1400]
+end
+```
+
+```ruby
+# test/system/tasks_test.rb
+require "application_system_test_case"
+
+class TasksTest < ApplicationSystemTestCase
+  include ActionView::RecordIdentifier # สำหรับ dom_id
+
+  test "creating a task without reloading the page" do
+    visit tasks_url
+
+    fill_in "Title", with: "Write slides"
+    click_on "Create Task"
+
+    within("#tasks") { assert_text "Write slides" }
+  end
+
+  test "editing a task inline" do
+    task = tasks(:one)
+    visit tasks_url
+
+    within("##{dom_id(task)}") { click_on "Edit" }
+    fill_in "Title", with: "Updated title"
+    click_on "Update Task"
+
+    within("##{dom_id(task)}") { assert_text "Updated title" }
+    assert_current_path tasks_path
+  end
+end
+```
+
+`assert_current_path tasks_path` ยืนยันว่า inline edit เกิดใน frame โดยไม่เปลี่ยนหน้า
+
+> **Best Practice:** ใช้ integration test เป็นหลักเพราะเร็วและเสถียร ใช้ system test เฉพาะ flow สำคัญที่ต้องพึ่ง JavaScript
+
+## 14. Best Practices & Common Pitfalls
+
+**Best Practices:**
+
+- เริ่มจาก **HTML ปกติ + Turbo Drive** ก่อน แล้วค่อยเพิ่ม Frames → Streams → Stimulus เมื่อจำเป็น
+- ใช้ **partial เดียว** (`_task.html.erb`) ทั้งใน index, frame, stream และ broadcast
+- ใช้ `dom_id` / `turbo_frame_tag record` แทนการพิมพ์ id เอง
+- ใส่ `format.html` fallback ทุกครั้งที่ใช้ `format.turbo_stream`
+- Stimulus controller ควรเล็ก, generic และรับค่าผ่าน Values
+- ใช้ `_later` broadcasts และระวัง N+1 ใน partial ที่ถูก broadcast
+
+**Common Pitfalls:**
+
+| ปัญหา                                     | สาเหตุ / วิธีแก้                                        |
+| ---------------------------------------- | ----------------------------------------------------- |
+| Form error ไม่แสดง                        | ลืม `status: :unprocessable_entity` ตอน render form     |
+| DELETE แล้ว redirect ผิด / ลบซ้ำ           | ใช้ `redirect_to ..., status: :see_other`              |
+| เห็น "Content missing" ใน frame            | response ไม่มี `<turbo-frame>` ที่ id ตรงกัน              |
+| JS ทำงานแค่หน้าแรก                         | ใช้ `DOMContentLoaded` ให้เปลี่ยนเป็น Stimulus `connect()` |
+| Broadcast ไม่มา                            | ลืม `turbo_stream_from` หรือชื่อ stream ไม่ตรงกัน         |
+| ข้อมูลหลุดไปให้ผู้ใช้อื่น                     | stream ไม่ได้ scope ตาม user/permission                  |
+| ลิงก์ใน frame ไม่เปลี่ยนทั้งหน้า               | ใส่ `data: { turbo_frame: "_top" }`                     |
+
+## 15. Resources
+
+- Hotwire: https://hotwired.dev
+- Turbo Handbook: https://turbo.hotwired.dev/handbook/introduction
+- Turbo Reference: https://turbo.hotwired.dev/reference/streams
+- Stimulus Handbook: https://stimulus.hotwired.dev/handbook/introduction
+- turbo-rails: https://github.com/hotwired/turbo-rails
+- stimulus-rails: https://github.com/hotwired/stimulus-rails
+- Hotwire Native: https://native.hotwired.dev
+- Rails Guides: https://guides.rubyonrails.org
