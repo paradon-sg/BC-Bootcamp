@@ -47,6 +47,8 @@ group :development, :test do
   # Audits gems for known security defects (use config/bundler-audit.yml to ignore issues)
   gem "bundler-audit", require: false
 
+  gem "tailwindcss-rails", "~> 4.6"
+
   # Static analysis for security vulnerabilities [https://brakemanscanner.org/]
   gem "brakeman", require: false
 
@@ -64,3 +66,4 @@ group :test do
   gem "capybara"
   gem "selenium-webdriver"
 end
+
