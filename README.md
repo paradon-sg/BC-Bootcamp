@@ -141,71 +141,59 @@ import "./controllers"
 
 ## 4. Project Structure
 
-**ไฟล์ที่เกี่ยวข้องกับ Hotwire ในโปรเจกต์ Rails 8 (หลังทำ [Workshop](#12-workshop-task-app) เสร็จ):**
+**ไฟล์ที่เกี่ยวข้องกับ Hotwire ในโปรเจกต์ตัวอย่าง ([branch `hotwire/demo`](https://github.com/paradon-sg/BC-Bootcamp/tree/hotwire/demo)):**
 
 ```
-hotwire-bootcamp/
+BC-Bootcamp/
 ├── app/
 │   ├── assets/
-│   │   └── builds/                              # ไฟล์ที่ esbuild build ออกมา (อยู่ใน .gitignore)
+│   │   ├── builds/                              # ไฟล์ที่ esbuild และ Tailwind build ออกมา (อยู่ใน .gitignore)
+│   │   └── tailwind/
+│   │       └── application.css                  # Tailwind + class ที่ใช้ซ้ำ (.btn, .input, .badge)
 │   ├── controllers/
-│   │   ├── projects_controller.rb               # includes(:users) ป้องกัน N+1
-│   │   └── tasks_controller.rb                  # respond_to format.turbo_stream
+│   │   ├── projects_controller.rb               # CRUD project (ไม่มี show ใช้หน้า edit แสดง tasks)
+│   │   └── tasks_controller.rb                  # make_in_progress / make_completed ตอบ format.turbo_stream
+│   ├── helpers/
+│   │   └── tasks_helper.rb                      # task_status_badge
 │   ├── javascript/
-│   │   ├── application.js                       # Entry point: import Turbo + Stimulus
+│   │   ├── application.js                       # Entry point: import Turbo + Stimulus controllers
 │   │   └── controllers/                         # Stimulus controllers
 │   │       ├── application.js                   # Stimulus application instance
 │   │       ├── index.js                         # Register controllers (generate อัตโนมัติ)
-│   │       ├── hello_controller.js              # ตัวอย่างที่ rails new สร้างให้
-│   │       └── auto_submit_controller.js        # เปลี่ยนสถานะ task
+│   │       └── dialog_controller.js             # เปิด/ปิด <dialog> ที่โหลดมาใน frame "modal"
 │   ├── models/
-│   │   ├── user.rb                              # has_many :projects, through: :memberships
-│   │   ├── membership.rb                        # ตารางกลาง User ↔ Project
-│   │   ├── project.rb                           # has_many :users (through), has_many :tasks
-│   │   └── task.rb                              # belongs_to :project + broadcasts_to :project
+│   │   ├── project.rb                           # has_many :tasks
+│   │   └── task.rb                              # enum status + broadcasts_to + broadcast จำนวน task ที่เสร็จ
 │   └── views/
+│       ├── application/
+│       │   └── _dialog.html.erb                 # Layout ของ modal: turbo_frame_tag "modal" + <dialog>
 │       ├── layouts/
-│       │   └── application.html.erb             # javascript_include_tag, turbo meta tags
+│       │   └── application.html.erb             # javascript_include_tag + flash
 │       ├── projects/
-│       │   ├── _form.html.erb                   # collection_check_boxes เลือกสมาชิก
-│       │   ├── _project.html.erb                # แสดง email ของสมาชิก
+│       │   ├── _form.html.erb
+│       │   ├── _project.html.erb
 │       │   ├── index.html.erb
 │       │   ├── new.html.erb
-│       │   ├── edit.html.erb
-│       │   └── show.html.erb                    # turbo_stream_from @project + #new_task + #tasks
+│       │   └── edit.html.erb                    # turbo_stream_from + รายการ tasks + frame "modal"
 │       └── tasks/
-│           ├── _form.html.erb                   # form_with แบบ shallow route
-│           ├── _task.html.erb                   # Partial ที่ใช้ซ้ำทั้งใน frame, stream และ broadcast
-│           ├── show.html.erb
-│           ├── new.html.erb
-│           ├── edit.html.erb                    # turbo_frame_tag @task สำหรับ inline edit
-│           └── create.turbo_stream.erb          # Turbo Stream response
+│           ├── _index.html.erb                  # รายการ tasks (#task-list) + จำนวนที่เสร็จ
+│           ├── _task.html.erb                   # Partial ที่ใช้ซ้ำทั้งใน stream และ broadcast
+│           ├── _completed_count.html.erb        # (เสร็จ/ทั้งหมด completed)
+│           ├── _form.html.erb                   # form_with model: [project, task]
+│           ├── new.html.erb                     # render ใน dialog
+│           ├── edit.html.erb                    # render ใน dialog
+│           └── update_status.turbo_stream.erb   # replace task + update จำนวนที่เสร็จ
 ├── config/
 │   ├── cable.yml                                # Action Cable adapter (สำหรับ broadcast)
-│   └── routes.rb                                # resources :projects + tasks แบบ shallow
+│   └── routes.rb                                # resources :projects + tasks (nested) + member actions
 ├── db/
 │   ├── migrate/
-│   │   ├── xxxxxxxxxxxxxx_create_users.rb       # email (unique)
 │   │   ├── xxxxxxxxxxxxxx_create_projects.rb    # name
-│   │   ├── xxxxxxxxxxxxxx_create_memberships.rb # project_id FK, user_id FK (unique คู่กัน)
-│   │   └── xxxxxxxxxxxxxx_create_tasks.rb       # project_id FK, title, status
-│   └── seeds.rb                                 # สร้าง user ตัวอย่าง
-├── test/
-│   ├── application_system_test_case.rb          # สร้างเอง (Rails 8.1 ไม่สร้างให้)
-│   ├── fixtures/
-│   │   ├── users.yml                            # แก้ email ไม่ให้ซ้ำ
-│   │   ├── projects.yml
-│   │   ├── memberships.yml
-│   │   └── tasks.yml                            # แก้ status ให้อยู่ใน enum
-│   ├── controllers/
-│   │   └── tasks_controller_test.rb             # Integration test: Turbo Stream response
-│   ├── models/
-│   │   └── task_test.rb                         # Model test: Broadcast
-│   └── system/
-│       └── tasks_test.rb                        # System test
-├── Gemfile                                      # jsbundling-rails, turbo-rails, stimulus-rails
+│   │   └── xxxxxxxxxxxxxx_create_tasks.rb       # project_id FK, title (not null), status (integer, default 0)
+│   └── schema.rb
+├── Gemfile                                      # jsbundling-rails, turbo-rails, stimulus-rails, tailwindcss-rails
 ├── package.json                                 # JS dependencies + build script ของ esbuild
-└── Procfile.dev                                 # bin/dev: รัน Rails server + esbuild --watch
+└── Procfile.dev                                 # bin/dev: รัน Rails server + esbuild --watch + tailwindcss:watch
 ```
 
 **คำอธิบายไฟล์สำคัญ:**
@@ -222,8 +210,8 @@ hotwire-bootcamp/
 // This file is auto-generated by ./bin/rails stimulus:manifest:update
 import { application } from "./application"
 
-import HelloController from "./hello_controller"
-application.register("hello", HelloController)
+import DialogController from "./dialog_controller"
+application.register("dialog", DialogController)
 ```
 
 - **`package.json`**: จัดการ JavaScript dependencies
@@ -962,117 +950,73 @@ export default class extends Controller {
 
 ## 12. Workshop: Task App
 
-สร้าง Task app ที่แบ่ง task ตาม project และแต่ละ project มี user เป็นสมาชิกได้หลายคน มี inline edit, เพิ่มงานโดยไม่ reload, เปลี่ยนสถานะ และ real-time เฉพาะคนที่เปิด project เดียวกัน
+สร้าง Task app ที่แบ่ง task ตาม project มี inline edit, เพิ่มงานโดยไม่ reload, เปลี่ยนสถานะ และ real-time เฉพาะคนที่เปิด project เดียวกัน
 
 ### ER Diagram
 
 ```mermaid
 erDiagram
-  USER ||--o{ MEMBERSHIP : has
-  PROJECT ||--o{ MEMBERSHIP : has
   PROJECT ||--o{ TASK : has
 
-  USER {
-    bigint id PK
-    string email "unique"
-  }
-  MEMBERSHIP {
-    bigint id PK
-    bigint project_id FK
-    bigint user_id FK
-  }
   PROJECT {
-    bigint id PK
-    string name "required"
+    integer id PK
+    string name
   }
   TASK {
-    bigint id PK
-    bigint project_id FK
-    string title "required"
-    string status "todo | in_progress | done (default: todo)"
+    integer id PK
+    integer project_id FK "not null"
+    string title "not null"
+    integer status "0 todo | 1 in_progress | 2 done (default: 0)"
   }
 ```
 
-| Relationship             | Rails association                                                        | ใช้ใน workshop                                         |
-| ------------------------ | ------------------------------------------------------------------------ | ----------------------------------------------------- |
-| Project ↔ Users (หลายต่อหลาย) | `Project has_many :users, through: :memberships` และกลับกันใน `User` | เลือกสมาชิกในฟอร์ม project และแสดงในรายการ project      |
-| Project → Tasks          | `Project has_many :tasks` / `Task belongs_to :project`                   | `broadcasts_to :project` + `turbo_stream_from @project` |
+| Relationship    | Rails association                                      | ใช้ใน workshop                                         |
+| --------------- | ------------------------------------------------------ | ----------------------------------------------------- |
+| Project → Tasks | `Project has_many :tasks` / `Task belongs_to :project` | `broadcasts_to :project` + `turbo_stream_from @project` |
 
-ตาราง `memberships` เป็นตารางกลาง 1 แถวคือ "user คนนี้เป็นสมาชิกของ project นี้" ใส่ unique index ที่ `(project_id, user_id)` เพื่อไม่ให้ user ซ้ำใน project เดียวกัน
-
-### Step 1: User
-
-```bash
-bin/rails generate model User email:string:uniq
-bin/rails db:migrate
-```
-
-`:uniq` สร้าง unique index ที่ `email` ให้ แล้วเพิ่ม validation ใน model:
-
-```ruby
-# app/models/user.rb
-class User < ApplicationRecord
-  has_many :memberships, dependent: :destroy
-  has_many :projects, through: :memberships
-
-  validates :email, presence: true, uniqueness: true
-end
-```
-
-Workshop นี้ไม่มีหน้าจัดการ user ให้สร้างผ่าน seeds:
-
-```ruby
-# db/seeds.rb
-%w[alice@example.com bob@example.com].each do |email|
-  User.find_or_create_by!(email: email)
-end
-```
-
-```bash
-bin/rails db:seed
-```
-
-### Step 2: Project, Membership และ Task
+### Step 1: Project และ Task
 
 ```bash
 bin/rails generate scaffold Project name:string --no-jbuilder
-bin/rails generate model Membership project:references user:references
-bin/rails generate scaffold Task project:references title:string status:string --no-jbuilder
+bin/rails generate scaffold Task project:references title:string status:integer --no-jbuilder
 ```
 
-แก้ migration ก่อน migrate (`references` สร้าง foreign key และ index ให้อัตโนมัติแล้ว):
-
-```ruby
-# db/migrate/xxxxxxxxxxxxxx_create_memberships.rb
-t.index %i[project_id user_id], unique: true
-```
+แก้ migration ของ task ก่อน migrate (`references` สร้าง foreign key และ index ที่ `project_id` ให้อัตโนมัติแล้ว):
 
 ```ruby
 # db/migrate/xxxxxxxxxxxxxx_create_tasks.rb
-t.string :status, default: "todo", null: false
+t.string :title, null: false
+t.integer :status, default: 0
 ```
 
 ```bash
 bin/rails db:migrate
+```
+
+ผลลัพธ์ใน `db/schema.rb`:
+
+```ruby
+create_table "projects", force: :cascade do |t|
+  t.string "name"
+  t.datetime "created_at", null: false
+  t.datetime "updated_at", null: false
+end
+
+create_table "tasks", force: :cascade do |t|
+  t.integer "project_id", null: false
+  t.string "title", null: false
+  t.integer "status", default: 0
+  t.datetime "created_at", null: false
+  t.datetime "updated_at", null: false
+  t.index ["project_id"], name: "index_tasks_on_project_id"
+end
 ```
 
 เพิ่ม association และ validation ตาม ER Diagram:
 
 ```ruby
-# app/models/membership.rb
-class Membership < ApplicationRecord
-  belongs_to :project
-  belongs_to :user
-
-  validates :user_id, uniqueness: { scope: :project_id }
-end
-```
-
-```ruby
 # app/models/project.rb
 class Project < ApplicationRecord
-  has_many :memberships, dependent: :destroy
-  has_many :users, through: :memberships
   has_many :tasks, dependent: :destroy
 
   validates :name, presence: true
@@ -1084,30 +1028,19 @@ end
 class Task < ApplicationRecord
   belongs_to :project
 
-  enum :status, { todo: "todo", in_progress: "in_progress", done: "done" }, validate: true
+  enum :status, { todo: 0, in_progress: 1, done: 2 }, validate: true
 
   validates :title, presence: true
 end
 ```
 
-`enum` เก็บค่าเป็น string อ่านใน database ได้ตรง ๆ และได้ method อย่าง `task.done?`, `task.in_progress!`, `Task.todo` มาให้ ส่วน `validate: true` ทำให้ค่าที่ไม่อยู่ใน enum เป็น validation error แทนการ raise `ArgumentError` (status มาจากฟอร์มจึงต้องตรวจ)
+`enum` map ชื่อสถานะกับตัวเลขที่เก็บใน database (`default: 0` จึงเป็น `todo`) และได้ method อย่าง `task.done?`, `task.in_progress!`, `Task.todo` มาให้ ส่วน `validate: true` ทำให้ค่าที่ไม่อยู่ใน enum เป็น validation error แทนการ raise `ArgumentError` (status มาจากฟอร์มจึงต้องตรวจ)
 
-เพิ่ม checkbox เลือกสมาชิกในฟอร์ม project (`has_many :users, through:` ให้ method `user_ids=` มา Rails จะสร้าง/ลบแถวใน `memberships` ให้เอง):
+> **Note:** ระบุตัวเลขให้แต่ละสถานะเองเสมอ และห้ามเปลี่ยนตัวเลขของสถานะที่มีอยู่แล้ว เพราะข้อมูลเดิมใน database จะเปลี่ยนความหมายทันที
 
-```erb
-<%# app/views/projects/_form.html.erb (เพิ่มใต้ช่อง name) %>
-<%= form.label :user_ids, "Members" %>
-<%= form.collection_check_boxes :user_ids, User.order(:email), :id, :email %>
-```
+ส่วน `project_id` ในฟอร์มของ task จะแก้ใน Step 5
 
-```erb
-<%# app/views/projects/_project.html.erb (เพิ่มใต้ชื่อ project) %>
-<p><strong>Members:</strong> <%= project.users.map(&:email).to_sentence %></p>
-```
-
-ส่วน `project_id` ในฟอร์มของ task จะแก้ใน Step 6
-
-### Step 3: Routes
+### Step 2: Routes
 
 แทนที่ `resources :projects` และ `resources :tasks` ที่ scaffold เพิ่มไว้:
 
@@ -1132,9 +1065,7 @@ end
 
 ลบ `app/views/tasks/index.html.erb` เพราะ task จะแสดงในหน้า project แทน
 
-### Step 4: ProjectsController
-
-`includes(:users)` ใน index ป้องกัน N+1 เพราะ `_project.html.erb` แสดง email ของสมาชิกทุกแถว:
+### Step 3: ProjectsController
 
 ```ruby
 # app/controllers/projects_controller.rb
@@ -1142,7 +1073,7 @@ class ProjectsController < ApplicationController
   before_action :set_project, only: %i[show edit update destroy]
 
   def index
-    @projects = Project.includes(:users).order(:name)
+    @projects = Project.order(:name)
   end
 
   def show
@@ -1186,12 +1117,12 @@ class ProjectsController < ApplicationController
   end
 
   def project_params
-    params.expect(project: [:name, user_ids: []])
+    params.expect(project: [:name])
   end
 end
 ```
 
-### Step 5: Stimulus controller สำหรับเปลี่ยนสถานะ
+### Step 4: Stimulus controller สำหรับเปลี่ยนสถานะ
 
 ```bash
 bin/rails generate stimulus auto_submit
@@ -1208,7 +1139,7 @@ export default class extends Controller {
 }
 ```
 
-### Step 6: Partial ที่ครอบด้วย Frame และฟอร์มของ Task
+### Step 5: Partial ที่ครอบด้วย Frame และฟอร์มของ Task
 
 ```erb
 <%# app/views/tasks/_task.html.erb %>
@@ -1265,14 +1196,13 @@ export default class extends Controller {
 <%= link_to "Back", @task.project %>
 ```
 
-### Step 7: หน้า Project พร้อมฟอร์มสร้างงานและ stream
+### Step 6: หน้า Project พร้อมฟอร์มสร้างงานและ stream
 
 ```erb
 <%# app/views/projects/show.html.erb %>
 <%= turbo_stream_from @project %>
 
 <h1><%= @project.name %></h1>
-<p>Members: <%= @project.users.map(&:email).to_sentence %></p>
 
 <%= link_to "Edit project", edit_project_path(@project) %>
 <%= link_to "All projects", projects_path %>
@@ -1289,7 +1219,7 @@ export default class extends Controller {
 
 `turbo_stream_from @project` subscribe เฉพาะ stream ของ project นี้ คนที่เปิด project อื่นจะไม่ได้รับ broadcast ของ project นี้
 
-### Step 8: TasksController
+### Step 7: TasksController
 
 ```ruby
 # app/controllers/tasks_controller.rb
@@ -1368,14 +1298,14 @@ end
 <%= render @task %>
 ```
 
-### Step 9: Real-time
+### Step 8: Real-time
 
 ```ruby
 # app/models/task.rb
 class Task < ApplicationRecord
   belongs_to :project
 
-  enum :status, { todo: "todo", in_progress: "in_progress", done: "done" }, validate: true
+  enum :status, { todo: 0, in_progress: 1, done: 2 }, validate: true
 
   validates :title, presence: true
 
@@ -1388,7 +1318,7 @@ end
 
 > **Note:** ถ้ามี element ที่ id เดียวกันเป็น**ลูกโดยตรง**ของ target อยู่แล้ว `append` / `prepend` จะแทนที่ของเดิม จึงไม่เกิด task ซ้ำในหน้าของคนที่สร้าง (`<turbo-frame id="task_1">` เป็นลูกโดยตรงของ `#tasks`)
 
-> **Security:** workshop นี้ไม่มี authentication ใครก็เปิด แก้ และเพิ่ม/ลบสมาชิกได้ทุก project ในงานจริงให้เพิ่ม authentication (เช่น `bin/rails generate authentication` ของ Rails 8) แล้วหา project ผ่าน `Current.user.projects.find` (ผ่าน `memberships`) เพื่อให้ทั้งหน้าและ stream เห็นได้เฉพาะสมาชิกของ project
+> **Security:** workshop นี้ไม่มี authentication ใครก็เปิดและแก้ได้ทุก project ในงานจริงให้เพิ่ม authentication (เช่น `bin/rails generate authentication` ของ Rails 8) และผูก project กับผู้ใช้ แล้วหา project ผ่าน `Current.user.projects.find` เพื่อให้ทั้งหน้าและ stream เห็นได้เฉพาะผู้ที่มีสิทธิ์
 
 ## 13. Testing
 
@@ -1401,19 +1331,7 @@ bin/rails test:system   # รัน system tests (ใช้ browser จริง
 
 ### Fixtures
 
-Generator สร้าง fixtures ให้แล้ว แต่ต้องแก้ 2 ไฟล์ก่อน:
-
-- `users.yml` ใส่ email ซ้ำกัน (`MyString`) ซึ่งชน unique index ทำให้ทุก test พัง
-- `tasks.yml` ใส่ `status: MyString` ซึ่งไม่อยู่ใน enum
-
-```yaml
-# test/fixtures/users.yml
-one:
-  email: alice@example.com
-
-two:
-  email: bob@example.com
-```
+Generator สร้าง fixtures ให้แล้ว แก้ `tasks.yml` ให้ใช้ชื่อ enum แทนตัวเลข (`status: 1`) จะอ่านง่ายกว่า (fixture แปลงชื่อเป็นตัวเลขให้เอง):
 
 ```yaml
 # test/fixtures/tasks.yml
@@ -1428,7 +1346,7 @@ two:
   status: done
 ```
 
-`projects.yml` และ `memberships.yml` ใช้ได้เลย: `users(:one)` เป็นสมาชิกของ `projects(:one)` และ `tasks(:one)` อยู่ใน `projects(:one)`
+`projects.yml` ใช้ได้เลย: `tasks(:one)` อยู่ใน `projects(:one)`
 
 ### Integration test: Turbo Stream response
 
