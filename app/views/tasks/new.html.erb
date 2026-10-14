@@ -1,0 +1,5 @@
+<% content_for :title, "New task" %>
+
+<%= render layout: "dialog", locals: { title: "New task" } do %>
+  <%= render "form", project: @project, task: @task %>
+<% end %>

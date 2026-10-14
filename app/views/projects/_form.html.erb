@@ -1,0 +1,22 @@
+<%= form_with model: project, class: "contents" do |form| %>
+  <% if project.errors.any? %>
+    <div id="error_explanation" class="form-errors">
+      <h2><%= pluralize(project.errors.count, "error") %> prohibited this project from being saved:</h2>
+
+      <ul>
+        <% project.errors.each do |error| %>
+          <li><%= error.full_message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="my-5">
+    <%= form.label :name %>
+    <%= form.text_field :name, class: ["input", { "input-error": project.errors[:name].any? }] %>
+  </div>
+
+  <div class="inline">
+    <%= form.submit class: "btn btn-primary w-full sm:w-auto" %>
+  </div>
+<% end %>

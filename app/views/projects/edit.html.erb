@@ -1,0 +1,17 @@
+<% content_for :title, "Editing project" %>
+
+<div class="w-full">
+  <h1 class="page-title">Editing project</h1>
+
+  <%= render "form", project: @project %>
+
+  <%= link_to "Back to projects", projects_path, class: "btn btn-secondary w-full sm:w-auto mt-2 sm:mt-0 sm:ml-2" %>
+
+  <%= turbo_stream_from @project, "tasks-container" %>
+
+  <div class="mt-10">
+    <%= render "tasks/index" %>
+  </div>
+
+  <%= turbo_frame_tag "modal" %>
+</div>

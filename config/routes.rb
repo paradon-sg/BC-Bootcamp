@@ -1,4 +1,15 @@
 Rails.application.routes.draw do
+  resources :projects, except: :show do
+    resources :tasks, only: [ :edit, :update, :new, :create, :destroy ] do
+      member do
+        patch :make_in_progress
+        patch :make_completed
+      end
+    end
+  end
+
+
+  mount ActionCable.server => "/cable"
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
@@ -10,5 +21,5 @@ Rails.application.routes.draw do
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
   # Defines the root path route ("/")
-  root "home#index"
+  root "projects#index"
 end

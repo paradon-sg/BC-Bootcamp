@@ -1,0 +1,3 @@
+<%= turbo_stream.replace dom_id(@task), partial: "tasks/task", locals: { task: @task } %>
+
+<%= turbo_stream.update dom_id(@project, "tasks-completed-count"), partial: "tasks/completed_count", locals: { project: @project } %>

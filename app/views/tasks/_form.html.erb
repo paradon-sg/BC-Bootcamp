@@ -1,0 +1,27 @@
+<%= form_with model: [ project, task ], class: "contents" do |form| %>
+  <% if task.errors.any? %>
+    <div id="error_explanation" class="form-errors">
+      <h2><%= pluralize(task.errors.count, "error") %> prohibited this task from being saved:</h2>
+
+      <ul>
+        <% task.errors.each do |error| %>
+          <li><%= error.full_message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="my-5">
+    <%= form.label :title %>
+    <%= form.text_field :title, class: ["input", { "input-error": task.errors[:title].any? }] %>
+  </div>
+
+  <div class="my-5 flex items-center gap-2">
+    <%= form.label :status %>
+    <%= form.select :status, Task.statuses.keys.map { |key| [key.humanize, key] }, { prompt: "Select Status" }, { class: ["input", { "input-error": task.errors[:status].any? }] } %>
+  </div>
+
+  <div class="inline">
+    <%= form.submit class: "btn btn-primary w-full sm:w-auto" %>
+  </div>
+<% end %>

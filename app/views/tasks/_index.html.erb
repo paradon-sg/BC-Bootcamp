@@ -1,0 +1,27 @@
+<%= turbo_frame_tag dom_id(@project, "tasks") do %>
+  <div class="w-full space-y-5">
+    <div class="flex justify-between items-center">
+      <h2 class="font-bold text-2xl">
+        Tasks
+        <span id="<%= dom_id(@project, "tasks-completed-count") %>" class="text-base font-normal text-gray-500">
+          <%= render "tasks/completed_count", project: @project %>
+        </span>
+      </h2>
+      <%= link_to "New task", new_project_task_path(@project), data: { turbo_frame: "modal" }, class: "btn btn-primary block" %>
+    </div>
+
+    <div id="task-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      
+      <% if @tasks.present? %>
+        
+        <% @tasks.each do |task| %>
+          <%= render "tasks/task", task: task %>
+        <% end %>
+
+      <% end %>
+
+      <p class="empty-state hidden only:block col-span-full">No tasks found.</p>
+
+    </div>
+  </div>
+<% end %>
