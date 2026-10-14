@@ -14,9 +14,8 @@
 10. [Page Refresh & Morphing](#10-page-refresh--morphing)
 11. [Stimulus](#11-stimulus)
 12. [Workshop: Task App](#12-workshop-task-app)
-13. [Testing](#13-testing)
-14. [Best Practices & Common Pitfalls](#14-best-practices--common-pitfalls)
-15. [Resources](#15-resources)
+13. [Best Practices & Common Pitfalls](#13-best-practices--common-pitfalls)
+14. [Resources](#14-resources)
 
 ## 1. Prerequisites
 
@@ -25,8 +24,7 @@
 - พื้นฐาน Ruby และ Ruby on Rails (MVC, Routing, ActiveRecord)
 - ความรู้ HTML/CSS
 - พื้นฐาน JavaScript (ES modules, class, event)
-- ติดตั้ง Ruby 4 และ Rails 8+
-- ติดตั้ง Node.js LTS และ Yarn (ใช้สำหรับ esbuild)
+- ติดตั้ง Docker Desktop (หรือ Docker Engine + Docker Compose)
 - ติดตั้ง VS Code พร้อม Ruby LSP Extension
 
 ## 2. What is Hotwire?
@@ -70,26 +68,50 @@ Hotwire ประกอบด้วย 3 ส่วนหลัก:
 
 ## 3. Environment Setup
 
-**การตั้งค่าสภาพแวดล้อม:**
+ใช้ **Docker** รันโปรเจกต์ ไม่ต้องติดตั้ง Ruby, Node.js หรือ Yarn ในเครื่อง:
 
 ```bash
-ruby -v               # ruby 4.x
-gem install rails -v "~> 8"
-rails -v              # Rails 8.x
-node -v
-yarn -v
+docker -v
+docker compose version
 ```
 
-สร้างโปรเจกต์ใหม่ด้วย **esbuild** (Rails 8 ติดตั้ง Turbo + Stimulus มาให้แล้ว):
+Clone โปรเจกต์เริ่มต้นจาก branch [`hotwire/workshop`](https://github.com/paradon-sg/BC-Bootcamp/tree/hotwire/workshop) ซึ่งเป็น Rails 8.1 ที่สร้างด้วย esbuild และตั้งค่า Turbo, Stimulus, Tailwind CSS และ Docker ไว้แล้ว:
 
 ```bash
-rails new hotwire-bootcamp -j esbuild
+git clone -b hotwire/workshop --single-branch https://github.com/paradon-sg/BC-Bootcamp.git hotwire-bootcamp
 cd hotwire-bootcamp
-bin/rails db:prepare
-bin/dev
+docker compose up --build
 ```
 
-`bin/dev` จะรัน Rails server และ esbuild แบบ `--watch` พร้อมกัน (ตาม `Procfile.dev`) ทุกครั้งที่แก้ไฟล์ JS, esbuild จะ build ใหม่ไปที่ `app/assets/builds/` ให้อัตโนมัติ
+ครั้งแรกจะ build image (Ruby 4.0.7 + Node 26.8.1) และติดตั้ง gem กับ npm package ให้ จากนั้นเปิด http://localhost:3000 จะเห็นหน้า `Home#index` ครั้งต่อไปรันแค่ `docker compose up`
+
+`compose.yml` มี 3 service ทำงานพร้อมกัน (แทน `bin/dev`):
+
+| Service | หน้าที่                                                            |
+| ------- | ----------------------------------------------------------------- |
+| `web`   | `bin/rails db:prepare` แล้วรัน Rails server ที่ port 3000           |
+| `js`    | `yarn build --watch` build JS ใหม่ทุกครั้งที่แก้ไฟล์                   |
+| `css`   | `bin/rails tailwindcss:watch` build CSS ใหม่ทุกครั้งที่แก้ไฟล์          |
+
+โค้ดในเครื่องถูก mount เข้า container แก้ไฟล์ใน VS Code แล้วเห็นผลทันที ไฟล์ที่ build ออกมาอยู่ที่ `app/assets/builds/`
+
+**รันคำสั่งใน container:** คำสั่ง `bin/rails` และ `yarn` ทุกคำสั่งในเอกสารนี้ให้รันผ่าน `docker compose exec web` ระหว่างที่ `docker compose up` ทำงานอยู่ (เปิดอีก terminal):
+
+```bash
+docker compose exec web bin/rails routes
+docker compose exec web bin/rails db:migrate
+docker compose exec web bin/rails console
+docker compose exec web yarn add <package>
+```
+
+หลังแก้ `Gemfile` ให้ติดตั้ง gem แล้ว restart server:
+
+```bash
+docker compose exec web bundle install
+docker compose restart web
+```
+
+> **Note:** บน Linux ไฟล์ที่ generator สร้างจาก container จะเป็นของ `root` ถ้าแก้ไฟล์ไม่ได้ให้รัน `sudo chown -R $USER:$USER .` (macOS และ Windows ไม่มีปัญหานี้)
 
 ตรวจสอบว่า Hotwire ถูกติดตั้งแล้ว:
 
@@ -144,7 +166,7 @@ import "./controllers"
 **ไฟล์ที่เกี่ยวข้องกับ Hotwire ในโปรเจกต์ตัวอย่าง ([branch `hotwire/demo`](https://github.com/paradon-sg/BC-Bootcamp/tree/hotwire/demo)):**
 
 ```
-BC-Bootcamp/
+hotwire-bootcamp/
 ├── app/
 │   ├── assets/
 │   │   ├── builds/                              # ไฟล์ที่ esbuild และ Tailwind build ออกมา (อยู่ใน .gitignore)
@@ -215,7 +237,7 @@ application.register("dialog", DialogController)
 ```
 
 - **`package.json`**: จัดการ JavaScript dependencies
-  - ติดตั้ง package ด้วย `yarn add <package>` แล้ว import ใน JS ได้เลย
+  - ติดตั้ง package ด้วย `docker compose exec web yarn add <package>` แล้ว import ใน JS ได้เลย
 
 - **`app/views/**/*.turbo_stream.erb`**: Template สำหรับตอบกลับเป็น Turbo Stream
   - ใช้เมื่อต้องการอัปเดตหลายจุดในหน้าหลัง submit form
@@ -791,7 +813,7 @@ static values = {
 สร้าง controller:
 
 ```bash
-bin/rails generate stimulus counter
+docker compose exec web bin/rails generate stimulus counter
 ```
 
 คำสั่งนี้จะสร้าง `counter_controller.js` และ register ใน `controllers/index.js` ให้อัตโนมัติ
@@ -977,8 +999,8 @@ erDiagram
 ### Step 1: Project และ Task
 
 ```bash
-bin/rails generate scaffold Project name:string --no-jbuilder
-bin/rails generate scaffold Task project:references title:string status:integer --no-jbuilder
+docker compose exec web bin/rails generate scaffold Project name:string --no-jbuilder --skip-test-framework
+docker compose exec web bin/rails generate scaffold Task project:references title:string status:integer --no-jbuilder --skip-test-framework
 ```
 
 แก้ migration ของ task ก่อน migrate (`references` สร้าง foreign key และ index ที่ `project_id` ให้อัตโนมัติแล้ว):
@@ -990,7 +1012,7 @@ t.integer :status, default: 0
 ```
 
 ```bash
-bin/rails db:migrate
+docker compose exec web bin/rails db:migrate
 ```
 
 ผลลัพธ์ใน `db/schema.rb`:
@@ -1125,7 +1147,7 @@ end
 ### Step 4: Stimulus controller สำหรับเปลี่ยนสถานะ
 
 ```bash
-bin/rails generate stimulus auto_submit
+docker compose exec web bin/rails generate stimulus auto_submit
 ```
 
 ```js
@@ -1320,166 +1342,7 @@ end
 
 > **Security:** workshop นี้ไม่มี authentication ใครก็เปิดและแก้ได้ทุก project ในงานจริงให้เพิ่ม authentication (เช่น `bin/rails generate authentication` ของ Rails 8) และผูก project กับผู้ใช้ แล้วหา project ผ่าน `Current.user.projects.find` เพื่อให้ทั้งหน้าและ stream เห็นได้เฉพาะผู้ที่มีสิทธิ์
 
-## 13. Testing
-
-Rails ใช้ **Minitest** เป็น default และ `turbo-rails` มี assertion สำหรับ Turbo มาให้แล้ว ไม่ต้องติดตั้งอะไรเพิ่ม
-
-```bash
-bin/rails test          # รัน unit + integration tests
-bin/rails test:system   # รัน system tests (ใช้ browser จริง)
-```
-
-### Fixtures
-
-Generator สร้าง fixtures ให้แล้ว แก้ `tasks.yml` ให้ใช้ชื่อ enum แทนตัวเลข (`status: 1`) จะอ่านง่ายกว่า (fixture แปลงชื่อเป็นตัวเลขให้เอง):
-
-```yaml
-# test/fixtures/tasks.yml
-one:
-  project: one
-  title: Prepare agenda
-  status: todo
-
-two:
-  project: two
-  title: Book a room
-  status: done
-```
-
-`projects.yml` ใช้ได้เลย: `tasks(:one)` อยู่ใน `projects(:one)`
-
-### Integration test: Turbo Stream response
-
-ทดสอบว่า controller ตอบ Turbo Stream ถูกต้อง โดยใช้ `as: :turbo_stream` และ `assert_turbo_stream`:
-
-```ruby
-# test/controllers/tasks_controller_test.rb
-require "test_helper"
-
-class TasksControllerTest < ActionDispatch::IntegrationTest
-  setup do
-    @project = projects(:one)
-  end
-
-  test "create prepends the new task via turbo stream" do
-    assert_difference("Task.count", 1) do
-      post project_tasks_url(@project), params: { task: { title: "Buy milk" } }, as: :turbo_stream
-    end
-
-    assert_turbo_stream action: :prepend, target: "tasks" do
-      assert_select "template", text: /Buy milk/
-    end
-  end
-
-  test "create returns 422 when title is blank" do
-    assert_no_difference("Task.count") do
-      post project_tasks_url(@project), params: { task: { title: "" } }, as: :turbo_stream
-    end
-
-    assert_response :unprocessable_content
-  end
-
-  test "destroy removes the task via turbo stream" do
-    task = tasks(:one)
-
-    delete task_url(task), as: :turbo_stream
-
-    assert_turbo_stream action: :remove, target: task
-  end
-
-  test "destroy redirects to the project with 303 for HTML requests" do
-    delete task_url(tasks(:one))
-
-    assert_redirected_to project_url(@project)
-    assert_response :see_other
-  end
-end
-```
-
-### Model test: Broadcast
-
-ทดสอบว่า model broadcast ไปยัง stream ของ project ด้วย `Turbo::Broadcastable::TestHelper`:
-
-```ruby
-# test/models/task_test.rb
-require "test_helper"
-require "turbo/broadcastable/test_helper"
-
-class TaskTest < ActiveSupport::TestCase
-  include ActiveJob::TestHelper            # perform_enqueued_jobs
-  include Turbo::Broadcastable::TestHelper # assert_turbo_stream_broadcasts
-
-  test "broadcasts to the project stream when created" do
-    project = projects(:one)
-
-    perform_enqueued_jobs do
-      project.tasks.create!(title: "Buy milk")
-    end
-
-    assert_turbo_stream_broadcasts project
-  end
-end
-```
-
-> **Note:** ใช้ `perform_enqueued_jobs` เพราะ `broadcasts_to` ส่ง broadcast ผ่าน background job (`_later`) และต้อง `require` + `include` helper เอง เพราะ turbo-rails จะ include ให้อัตโนมัติก็ต่อเมื่อ Action Cable ถูกโหลดแล้ว ทำให้ test พังบ้างไม่พังบ้างตามลำดับการรัน
-
-### System test
-
-ใช้ทดสอบ flow ที่ต้องรัน JavaScript จริง (Turbo + Stimulus)
-
-Rails 8.1 ไม่สร้าง system test ให้ตอน `rails new` และ scaffold แล้ว (gem `capybara` และ `selenium-webdriver` ยังอยู่ใน `Gemfile`) ให้สร้างไฟล์เอง:
-
-```ruby
-# test/application_system_test_case.rb
-require "test_helper"
-
-class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
-  driven_by :selenium, using: :headless_chrome, screen_size: [1400, 1400]
-end
-```
-
-```ruby
-# test/system/tasks_test.rb
-require "application_system_test_case"
-
-class TasksTest < ApplicationSystemTestCase
-  include ActionView::RecordIdentifier # สำหรับ dom_id
-
-  setup do
-    @project = projects(:one)
-  end
-
-  test "creating a task without reloading the page" do
-    visit project_url(@project)
-
-    fill_in "Title", with: "Write slides"
-    click_on "Create Task"
-
-    within("#tasks") { assert_text "Write slides" }
-  end
-
-  test "editing a task inline" do
-    task = tasks(:one)
-    visit project_url(@project)
-
-    # หน้า project มีฟอร์ม new_task ที่มีช่อง "Title" ด้วย จึงต้องจำกัดขอบเขตด้วย within
-    within("##{dom_id(task)}") do
-      click_on "Edit"
-      fill_in "Title", with: "Updated title"
-      click_on "Update Task"
-
-      assert_text "Updated title"
-    end
-    assert_current_path project_path(@project)
-  end
-end
-```
-
-`assert_current_path project_path(@project)` ยืนยันว่า inline edit เกิดใน frame โดยไม่เปลี่ยนหน้า
-
-> **Best Practice:** ใช้ integration test เป็นหลักเพราะเร็วและเสถียร ใช้ system test เฉพาะ flow สำคัญที่ต้องพึ่ง JavaScript
-
-## 14. Best Practices & Common Pitfalls
+## 13. Best Practices & Common Pitfalls
 
 **Best Practices:**
 
@@ -1505,7 +1368,7 @@ end
 | ข้อมูลหลุดไปให้ผู้ใช้อื่น                     | stream ไม่ได้ scope ตาม user/permission                  |
 | ลิงก์ใน frame ไม่เปลี่ยนทั้งหน้า               | ใส่ `data: { turbo_frame: "_top" }`                     |
 
-## 15. Resources
+## 14. Resources
 
 - Hotwire: https://hotwired.dev
 - Turbo Handbook: https://turbo.hotwired.dev/handbook/introduction
