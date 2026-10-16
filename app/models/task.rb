@@ -1,5 +1,5 @@
 class Task < ApplicationRecord
-  enum :status, { pending: 0, in_progress: 1, completed: 2 }
+  enum :status, { pending: 0, in_progress: 1, completed: 2 }, validate: true
 
   belongs_to :project
 
@@ -7,7 +7,7 @@ class Task < ApplicationRecord
 
   broadcasts_to ->(task) { [ task.project, "tasks-container" ] }, target: "task-list"
 
-  after_commit :broadcast_completed_count
+  after_commit :broadcast_completed_count, unless: :destroyed_by_association
 
   private
     def broadcast_completed_count

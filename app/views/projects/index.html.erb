@@ -1,7 +1,4 @@
 <% content_for :title, "Projects" %>
-<% content_for :head do %>
-  <%= turbo_refreshes_with method: :morph, scroll: :preserve %>
-<% end %>
 
 <div class="w-full">
   <div class="flex justify-between items-center">
@@ -12,16 +9,10 @@
   <%= turbo_stream_from "project-container" %>
 
   <div id="project-list" class="min-w-full divide-y divide-gray-200 space-y-5">
-    
-    <% if @projects.any? %>
-
-      <% @projects.each do |project| %>
-        <%= render "projects/project", project: project %>
-      <% end %>
-
-    <% else %>
-      <p class="empty-state hidden only:block col-span-full">No projects found.</p>
+    <% @projects.each do |project| %>
+      <%= render "projects/project", project: project %>
     <% end %>
-    
+
+    <p class="empty-state hidden only:block col-span-full">No projects found.</p>
   </div>
 </div>

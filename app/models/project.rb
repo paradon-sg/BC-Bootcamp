@@ -3,5 +3,5 @@ class Project < ApplicationRecord
 
   validates :name, presence: true
 
-  broadcasts_refreshes_to ->(_) { "project-container" }
+  broadcasts_to ->(_) { "project-container" }, target: "project-list"
 end
