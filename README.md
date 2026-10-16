@@ -64,16 +64,14 @@ Turbo คือหัวใจของ Hotwire
 
 ```erb
 <%# Turbo Drive: ลิงก์ปกติ ไม่ต้องทำอะไรเพิ่ม %>
-<%= link_to "Tasks", tasks_path %>
+<%= link_to "Edit", edit_project_path(project) %>
 
-<%# Turbo Frames: คลิก Edit แล้วเฉพาะกรอบนี้เปลี่ยนเป็นฟอร์ม %>
-<%= turbo_frame_tag dom_id(task) do %>
-  <%= task.title %>
-  <%= link_to "Edit", edit_task_path(task) %>
-<% end %>
+<%# Turbo Frames: คลิก New task แล้วโหลดฟอร์มมาแสดงเฉพาะใน frame "modal" %>
+<%= link_to "New task", new_project_task_path(@project), data: { turbo_frame: "modal" } %>
+<%= turbo_frame_tag "modal" %>
 
-<%# Turbo Streams: สั่งเพิ่ม task ใหม่ต่อท้าย list %>
-<%= turbo_stream.append "tasks", partial: "tasks/task", locals: { task: @task } %>
+<%# Turbo Streams: สั่งแทนที่การ์ดของ task ที่เปลี่ยนสถานะ %>
+<%= turbo_stream.replace dom_id(@task), partial: "tasks/task", locals: { task: @task } %>
 
 ```
 
@@ -391,12 +389,11 @@ Turbo.visit("/tasks", { action: "replace" })
 ### Link ที่ใช้ HTTP method อื่น
 
 ```erb
-<%= link_to "Delete", task_path(task),
-      data: { turbo_method: :delete, turbo_confirm: "ลบใช่ไหม?" } %>
+<%= link_to "Destroy", project_task_path(task.project, task),
+      data: { turbo_method: :delete, turbo_confirm: "Are you sure?" } %>
 
 <%# แนะนำใช้ button_to สำหรับ action ที่เปลี่ยนข้อมูล %>
-<%= button_to "Delete", task_path(task), method: :delete,
-      form: { data: { turbo_confirm: "ลบใช่ไหม?" } } %>
+<%= button_to "Destroy", [ task.project, task ], method: :delete, data: { turbo_confirm: "Are you sure?" } %>
 
 ```
 
@@ -413,21 +410,22 @@ Turbo Drive ต้องการ response ที่ถูกต้องหล�
   - เพราะ browser จะทำ Back/Refresh ไม่ถูกต้อง
 
 ```ruby
-def create
-  @task = Task.new(task_params)
-
-  if @task.save
-    redirect_to tasks_path, notice: "Task created.", status: :see_other
+# PATCH/PUT /projects/1
+def update
+  if @project.update(project_params)
+    redirect_to edit_project_path(@project), notice: "Project was successfully updated.", status: :see_other
   else
     # ต้องส่ง 422 ไม่อย่างนั้น Turbo จะไม่ render error
     # (:unprocessable_content คือ 422 ชื่อใหม่ตั้งแต่ Rack 3.1, :unprocessable_entity ถูก deprecate แล้ว)
-    render :new, status: :unprocessable_content
+    render :edit, status: :unprocessable_content
   end
 end
 
+# DELETE /projects/1
 def destroy
-  @task.destroy
-  redirect_to tasks_path, status: :see_other
+  @project.destroy!
+
+  redirect_to projects_path, notice: "Project was successfully destroyed.", status: :see_other
 end
 
 ```
@@ -517,32 +515,36 @@ Turbo Frames คือการแบ่งหน้าเว็บเป็น 
 3. นำ**เนื้อหาข้างใน**ไปแทนที่เนื้อหาของ frame เดิม
 4. ส่วนอื่นของ response ถูกทิ้ง
 
-### Inline edit
+### อัปเดตเฉพาะรายการ task
+
+ตัวอย่างจาก [Workshop](#step-7-view-ของ-task): กด "Destroy" แล้วอัปเดตเฉพาะรายการ task ไม่ใช่ทั้งหน้า
 
 ```erb
-<%# app/views/tasks/_task.html.erb %>
-<%= turbo_frame_tag task do %>
-  <p><%= task.title %></p>
-  <%= link_to "Edit", edit_task_path(task) %>
+<%# app/views/tasks/_index.html.erb (ย่อ) %>
+<%= turbo_frame_tag dom_id(@project, "tasks") do %>
+  <div id="task-list">
+    <% @tasks.each do |task| %>
+      <%= render "tasks/task", task: task %>
+    <% end %>
+  </div>
 <% end %>
 
 ```
 
 ```erb
-<%# app/views/tasks/edit.html.erb %>
-<h1>Edit task</h1>
-
-<%= turbo_frame_tag @task do %>
-  <%= render "form", task: @task %>
-<% end %>
+<%# app/views/tasks/_task.html.erb (ย่อ) %>
+<div id="<%= dom_id(task) %>">
+  <%= task.title %>
+  <%= button_to "Destroy", [ task.project, task ], method: :delete, data: { turbo_confirm: "Are you sure?" } %>
+</div>
 
 ```
 
-- `turbo_frame_tag task` จะสร้าง `<turbo-frame id="task_1">` ให้อัตโนมัติ (ใช้ `dom_id`)
-- เมื่อคลิก "Edit":
-  1. Turbo โหลด `/tasks/1/edit`
-  2. ดึงเฉพาะ `<turbo-frame id="task_1">` มาแทนที่
-  3. ได้ inline edit โดยไม่ต้องเขียน JS เลย
+- `turbo_frame_tag dom_id(@project, "tasks")` จะสร้าง `<turbo-frame id="tasks_project_1">`
+- เมื่อกด "Destroy":
+  1. Turbo ส่ง `DELETE /projects/1/tasks/1` แล้วตาม redirect ไปที่ `/projects/1/edit`
+  2. ดึงเฉพาะ `<turbo-frame id="tasks_project_1">` จาก response มาแทนที่
+  3. ฟอร์มของ project และส่วนอื่นในหน้าไม่เปลี่ยน โดยไม่ต้องเขียน JS เลย
 
 ### Eager และ Lazy loading
 
@@ -567,28 +569,38 @@ turbo-frame[aria-busy="true"] { opacity: 0.5; }
 ### ควบคุม frame จากภายนอก
 
 - ลิงก์หรือฟอร์มที่อยู่นอก frame สั่งให้อัปเดต frame ได้ด้วย `data-turbo-frame`
-- ตัวอย่าง: ฟอร์มค้นหาที่แสดงผลใน frame `results`
+- ตัวอย่างจาก [Workshop](#step-6-modal-dialog-ด้วย-stimulus): ลิงก์ "New task" โหลดฟอร์มมาแสดงใน frame `modal`
 
 ```erb
-<%= form_with url: tasks_path, method: :get,
-      data: { turbo_frame: "results", turbo_action: "advance" } do |f| %>
-  <%= f.search_field :q %>
-<% end %>
+<%# app/views/tasks/_index.html.erb (ย่อ) %>
+<%= link_to "New task", new_project_task_path(@project), data: { turbo_frame: "modal" } %>
 
-<%= turbo_frame_tag "results" do %>
-  <%= render @tasks %>
+```
+
+```erb
+<%# app/views/projects/edit.html.erb (ย่อ) %>
+<%= render "tasks/index" %>
+
+<%= turbo_frame_tag "modal" %>
+
+```
+
+```erb
+<%# app/views/tasks/new.html.erb (ย่อ) %>
+<%= turbo_frame_tag "modal" do %>
+  <%= render "form", project: @project, task: @task %>
 <% end %>
 
 ```
 
-- `turbo_action: "advance"` ทำให้ URL ใน address bar เปลี่ยนตามคำค้น
-- กด Back แล้วกลับไปผลค้นหาก่อนหน้าได้
+- frame `modal` ว่างไว้ก่อน รอรับเนื้อหาเมื่อคลิกลิงก์
+- response ต้องมี `turbo_frame_tag "modal"` id เดียวกัน (ใน Workshop อยู่ใน partial `application/_dialog.html.erb`)
 
 ### Navigate ออกนอก frame
 
 ```erb
 <%# ลิงก์นี้อยู่ใน frame แต่ต้องการเปลี่ยนทั้งหน้า %>
-<%= link_to "View", task_path(task), data: { turbo_frame: "_top" } %>
+<%= link_to "Back to projects", projects_path, data: { turbo_frame: "_top" } %>
 
 <%# ให้ทุกลิงก์ใน frame เปลี่ยนทั้งหน้า %>
 <%= turbo_frame_tag "nav", target: "_top" do %>
@@ -627,7 +639,7 @@ Turbo Streams ใช้เมื่อต้องการ **อัปเดต
 - Turbo Stream คือ HTML element ที่บอกว่า "ทำ action อะไร กับ element id ไหน":
 
 ```html
-<turbo-stream action="prepend" target="tasks">
+<turbo-stream action="append" target="task-list">
   <template>
     <div id="task_5">Buy milk</div>
   </template>
@@ -650,69 +662,63 @@ Turbo Streams ใช้เมื่อต้องการ **อัปเดต
 
 ### ตอบกลับ Turbo Stream จาก Controller
 
+ตัวอย่างจาก [Workshop](#step-8-taskscontroller): กดปุ่ม "Mark complete" แล้วอัปเดตการ์ดของ task และจำนวน task ที่เสร็จพร้อมกัน
+
 ```ruby
-def create
-  @task = Task.new(task_params)
+# PATCH /projects/:project_id/tasks/1/make_completed
+def make_completed
+  @task.completed!
 
   respond_to do |format|
-    if @task.save
-      format.turbo_stream  # render create.turbo_stream.erb
-      format.html { redirect_to tasks_path, status: :see_other }
-    else
-      format.html { render :new, status: :unprocessable_content }
-    end
+    format.turbo_stream { render :update_status }  # render update_status.turbo_stream.erb
+    format.html { redirect_to edit_project_path(@project), status: :see_other }
   end
 end
 
 ```
 
 ```erb
-<%# app/views/tasks/create.turbo_stream.erb %>
-<%= turbo_stream.prepend "tasks", @task %>
-<%= turbo_stream.update "task_count", Task.count %>
-<%= turbo_stream.update "flash", partial: "shared/flash", locals: { notice: "Task created." } %>
+<%# app/views/tasks/update_status.turbo_stream.erb %>
+<%= turbo_stream.replace dom_id(@task), partial: "tasks/task", locals: { task: @task } %>
+
+<%= turbo_stream.update dom_id(@project, "tasks-completed-count"), partial: "tasks/completed_count", locals: { project: @project } %>
 
 ```
 
 หน้าที่มี target ของแต่ละ stream action:
 
 ```erb
-<%# app/views/tasks/index.html.erb %>
-<h1>Tasks (<span id="task_count"><%= Task.count %></span>)</h1>
+<%# app/views/tasks/_index.html.erb (ย่อ) %>
+<h2>
+  Tasks
+  <span id="<%= dom_id(@project, "tasks-completed-count") %>">
+    <%= render "tasks/completed_count", project: @project %>
+  </span>
+</h2>
 
-<%= render "form", task: Task.new %>
-
-<div id="tasks">
-  <%= render @tasks %>
+<div id="task-list">
+  <% @tasks.each do |task| %>
+    <%= render "tasks/task", task: task %>
+  <% end %>
 </div>
 
 ```
 
 ```erb
-<%# app/views/layouts/application.html.erb (ใน <body>) %>
-<div id="flash">
-  <%= render "shared/flash", notice: notice %>
+<%# app/views/tasks/_task.html.erb (ย่อ) %>
+<div id="<%= dom_id(task) %>">
+  <%= task.title %>
+  <%= task_status_badge(task) %>
+  ...
 </div>
-
-<%= yield %>
-
-```
-
-```erb
-<%# app/views/shared/_flash.html.erb %>
-<%# ใส่ data-turbo-temporary ที่ข้อความ ไม่ใส่ที่ #flash เพราะ #flash ต้องอยู่ในหน้าเสมอเพื่อเป็น target %>
-<% if notice.present? %>
-  <p data-turbo-temporary><%= notice %></p>
-<% end %>
 
 ```
 
 - **target ของแต่ละ action:**
-  - `prepend "tasks"` → `<div id="tasks">` เพิ่ม task ใหม่ไว้บนสุด
-  - `update "task_count"` → `<span id="task_count">` แทนที่ตัวเลขจำนวน task
-  - `update "flash"` → `<div id="flash">` แทนที่ข้อความด้วย partial `shared/_flash.html.erb`
+  - `replace dom_id(@task)` → `<div id="task_1">` แทนที่การ์ดทั้งใบด้วย partial `tasks/_task.html.erb`
+  - `update dom_id(@project, "tasks-completed-count")` → `<span id="tasks-completed-count_project_1">` แทนที่ข้อความ `(1/3 completed)`
 - target id ต้องมีอยู่ในหน้าแล้ว ถ้าไม่มี Turbo จะข้าม action นั้นไปเฉย ๆ โดยไม่มี error
-- `turbo_stream.prepend "tasks", @task` จะ render partial `tasks/_task.html.erb` ให้อัตโนมัติ (ตัวอย่าง partial ดูที่ [Inline edit](#inline-edit))
+- ใช้ `dom_id` สร้าง id ทั้งใน view และ stream เพื่อให้ตรงกันเสมอ
 - **Turbo ขอ Turbo Stream เมื่อไหร่?**
   - ตอน submit ฟอร์มที่ไม่ใช่ GET Turbo จะเพิ่ม `text/vnd.turbo-stream.html` ใน `Accept` header ให้ `format.turbo_stream` จึงทำงานได้
   - ลิงก์หรือฟอร์ม GET ต้องขอเองด้วย `data: { turbo_stream: true }`
@@ -721,11 +727,11 @@ end
 
 ```ruby
 def destroy
-  @task.destroy
+  @task.destroy!
 
   respond_to do |format|
     format.turbo_stream { render turbo_stream: turbo_stream.remove(@task) }
-    format.html { redirect_to tasks_path, status: :see_other }
+    format.html { redirect_to edit_project_path(@project), status: :see_other }
   end
 end
 
@@ -737,8 +743,8 @@ end
 
 ```erb
 <%# targets = CSS selector อัปเดตทุก element ที่ตรง %>
-<%= turbo_stream.update_all ".task-count", Task.count %>
-<%= turbo_stream.remove_all ".done-task" %>
+<%= turbo_stream.update_all ".completed-count", partial: "tasks/completed_count", locals: { project: @project } %>
+<%= turbo_stream.remove_all "#task-list .completed" %>
 
 <%# morph แทนการแทนที่ทั้งก้อน (รักษา focus/state ของ element ข้างใน) %>
 <%= turbo_stream.replace @task, method: :morph %>
@@ -768,8 +774,8 @@ Turbo Streams สามารถส่งผ่าน **WebSocket (Action Cable)
 class Task < ApplicationRecord
   belongs_to :project
 
-  # create → prepend, update → replace, destroy → remove
-  broadcasts_to :project, inserts_by: :prepend
+  # create → append ใน #task-list, update → replace, destroy → remove
+  broadcasts_to ->(task) { [ task.project, "tasks-container" ] }, target: "task-list"
 end
 
 ```
@@ -780,24 +786,31 @@ end
 class Task < ApplicationRecord
   belongs_to :project
 
-  after_create_commit  -> { broadcast_prepend_later_to project, target: "tasks" }
-  after_update_commit  -> { broadcast_replace_later_to project }
-  after_destroy_commit -> { broadcast_remove_to project }
+  after_create_commit  -> { broadcast_append_later_to [ project, "tasks-container" ], target: "task-list" }
+  after_update_commit  -> { broadcast_replace_later_to [ project, "tasks-container" ] }
+  after_destroy_commit -> { broadcast_remove_to [ project, "tasks-container" ] }
 end
 
 ```
 
+- stream name เป็น array ได้ Rails จะต่อกันเป็นชื่อเดียว เช่น `[ project, "tasks-container" ]`
+- broadcast ส่วนอื่นนอกจาก record ได้ด้วย `broadcast_update_later_to` เช่น จำนวน task ที่เสร็จ (ดู [Workshop Step 9](#step-9-real-time))
+
 ### 2) View: subscribe stream
 
 ```erb
-<%# app/views/projects/show.html.erb %>
-<%= turbo_stream_from @project %>
+<%# app/views/projects/edit.html.erb %>
+<%= turbo_stream_from @project, "tasks-container" %>
 
-<div id="tasks">
-  <%= render @project.tasks %>
+<div id="task-list">
+  <% @tasks.each do |task| %>
+    <%= render "tasks/task", task: task %>
+  <% end %>
 </div>
 
 ```
+
+- argument ของ `turbo_stream_from` ต้องตรงกับ stream name ใน model ทุกตัว
 
 > **Security:** Stream name ถูก sign โดย Rails ผู้ใช้จึงปลอมชื่อ stream เองไม่ได้ แต่ใครก็ตามที่เปิดหน้านั้นได้จะได้รับ broadcast ด้วย
 >
@@ -835,22 +848,28 @@ Turbo 8 เพิ่ม **page refresh** คือการโหลด**หน�
 
 **ใช้ร่วมกับ broadcast:**
 
+- ตัวอย่าง: แทน `broadcasts_to` + `broadcast_completed_count` ใน [Workshop Step 9](#step-9-real-time) ด้วยบรรทัดเดียว
+
 ```ruby
 class Task < ApplicationRecord
   belongs_to :project
-  broadcasts_refreshes_to :project
+
+  broadcasts_refreshes_to ->(task) { [ task.project, "tasks-container" ] }
 end
 
 ```
 
 ```erb
-<%= turbo_stream_from @project %>
+<%# app/views/projects/edit.html.erb %>
+<% turbo_refreshes_with method: :morph, scroll: :preserve %>
+
+<%= turbo_stream_from @project, "tasks-container" %>
 
 ```
 
-เมื่อ task เปลี่ยน:
+เมื่อ task ถูกสร้าง/แก้/ลบ:
 
-1. ทุกคนที่เปิดหน้า project ได้รับคำสั่ง `refresh`
+1. ทุกคนที่เปิดหน้า edit ของ project นั้นได้รับคำสั่ง `refresh`
 2. หน้าโหลด HTML ใหม่
 3. morph เฉพาะส่วนที่ต่างกัน
 
@@ -869,7 +888,7 @@ end
 - ใส่ `refresh: "morph"` เพื่อให้ frame โหลดเนื้อหาใหม่แบบ morph ด้วยเมื่อเกิด page refresh
 
 ```erb
-<%= turbo_frame_tag "comments", src: comments_path, refresh: "morph" %>
+<%= turbo_frame_tag "stats", src: stats_path, refresh: "morph" %>
 
 ```
 
@@ -1163,7 +1182,7 @@ export default class extends Controller {
 ```
 
 ```erb
-<%= form_with model: Task.new,
+<%= form_with model: [ @project, Task.new ],
       data: { controller: "reset-form", action: "turbo:submit-end->reset-form#reset" } do |f| %>
   ...
 <% end %>
@@ -1176,9 +1195,12 @@ export default class extends Controller {
 
 สร้าง Task app ที่แบ่ง task ตาม project โดยมี:
 
-- inline edit (แก้ชื่อและเปลี่ยนสถานะ)
-- เพิ่มงานโดยไม่ reload
-- real-time เฉพาะคนที่เปิด project เดียวกัน
+- เพิ่ม/แก้ไข task ผ่าน modal (`<dialog>` + Turbo Frame + Stimulus)
+- เปลี่ยนสถานะ task ด้วยปุ่มเดียวโดยไม่ reload (Turbo Stream)
+- real-time เฉพาะคนที่เปิด project เดียวกัน พร้อมจำนวน task ที่เสร็จแล้ว
+- หน้ารายการ project อัปเดต real-time เมื่อมีคนเพิ่ม/แก้/ลบ project
+
+> **โค้ดเฉลย:** [branch `hotwire/demo`](https://github.com/paradon-sg/BC-Bootcamp/tree/hotwire/demo)
 
 ### ER Diagram
 
@@ -1194,14 +1216,14 @@ erDiagram
     integer id PK
     integer project_id FK "not null"
     string title "not null"
-    integer status "0 todo | 1 in_progress | 2 done (default: 0)"
+    integer status "0 pending | 1 in_progress | 2 completed (default: 0)"
   }
 
 ```
 
-| Relationship    | Rails association                                      | ใช้ใน workshop                                           |
-| --------------- | ------------------------------------------------------ | ------------------------------------------------------- |
-| Project → Tasks | `Project has_many :tasks` / `Task belongs_to :project` | `broadcasts_to :project` + `turbo_stream_from @project` |
+| Relationship    | Rails association                                      | ใช้ใน workshop                                                                      |
+| --------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| Project → Tasks | `Project has_many :tasks` / `Task belongs_to :project` | `broadcasts_to [project, "tasks-container"]` + `turbo_stream_from @project, "tasks-container"` |
 
 ### Step 1: Project และ Task
 
@@ -1219,8 +1241,17 @@ docker compose exec web bin/rails generate scaffold Task project:references titl
 ```ruby
 
 # db/migrate/xxxxxxxxxxxxxx_create_tasks.rb
-t.string :title, null: false
-t.integer :status, default: 0
+class CreateTasks < ActiveRecord::Migration[8.1]
+  def change
+    create_table :tasks do |t|
+      t.references :project, null: false, foreign_key: true
+      t.string  :title, null: false
+      t.integer :status, default: 0
+
+      t.timestamps
+    end
+  end
+end
 
 ```
 
@@ -1249,7 +1280,7 @@ end
 
 ```
 
-เพิ่ม association และ validation ตาม ER Diagram:
+เพิ่ม association และ validation ตาม ER Diagram (ส่วน broadcast จะเพิ่มใน Step 9):
 
 ```ruby
 
@@ -1266,9 +1297,9 @@ end
 
 # app/models/task.rb
 class Task < ApplicationRecord
-  belongs_to :project
+  enum :status, { pending: 0, in_progress: 1, completed: 2 }, validate: true
 
-  enum :status, { todo: 0, in_progress: 1, done: 2 }, validate: true
+  belongs_to :project
 
   validates :title, presence: true
 end
@@ -1277,8 +1308,11 @@ end
 
 **`enum`:**
 
-- map ชื่อสถานะกับตัวเลขที่เก็บใน database (`default: 0` จึงเป็น `todo`)
-- ได้ method อย่าง `task.done?`, `task.in_progress!`, `Task.todo` มาให้
+- map ชื่อสถานะกับตัวเลขที่เก็บใน database (`default: 0` จึงเป็น `pending`)
+- ได้ method มาให้ เช่น
+  - `task.pending?`, `task.in_progress?` ใช้เลือกปุ่มที่จะแสดง
+  - `task.in_progress!`, `task.completed!` ใช้ใน member action ของ controller
+  - `Task.completed` / `project.tasks.completed` ใช้นับ task ที่เสร็จแล้ว
 - `validate: true` ทำให้ค่าที่ไม่อยู่ใน enum เป็น validation error แทนการ raise `ArgumentError`
   - status มาจากฟอร์มจึงต้องตรวจ
 
@@ -1286,8 +1320,6 @@ end
 >
 > - ระบุตัวเลขให้แต่ละสถานะเองเสมอ
 > - ห้ามเปลี่ยนตัวเลขของสถานะที่มีอยู่แล้ว เพราะข้อมูลเดิมใน database จะเปลี่ยนความหมายทันที
-
-- ช่อง `project_id` ในฟอร์มของ task จะแก้ใน Step 4
 
 ### Step 2: Routes
 
@@ -1297,40 +1329,135 @@ end
 
 # config/routes.rb
 Rails.application.routes.draw do
-  resources :projects do
-    resources :tasks, except: :index
+  resources :projects, except: :show do
+    resources :tasks, only: [ :edit, :update, :new, :create, :destroy ] do
+      member do
+        patch :make_in_progress
+        patch :make_completed
+      end
+    end
   end
+
+  get "up" => "rails/health#show", as: :rails_health_check
 
   root "projects#index"
 end
 
 ```
 
-ทุก route ของ task อยู่ใต้ project จึงต้องส่ง project ไปด้วยเสมอ:
+- **ไม่มีหน้า show ของ project:** task แสดงและจัดการในหน้า edit ของ project
+- **member action:** เปลี่ยนสถานะ task ด้วย `PATCH` แยกจาก `update` ปกติ
+- ทุก route ของ task อยู่ใต้ project จึงต้องส่ง project ไปด้วยเสมอ:
 
-| Route                                             | Path helper                             |
-| ------------------------------------------------- | --------------------------------------- |
-| `POST /projects/:project_id/tasks`                | `project_tasks_path(project)`           |
-| `GET /projects/:project_id/tasks/:id/edit`        | `edit_project_task_path(project, task)` |
-| `PATCH`, `DELETE /projects/:project_id/tasks/:id` | `project_task_path(project, task)`      |
+| Route                                                  | Path helper                                         |
+| ------------------------------------------------------ | --------------------------------------------------- |
+| `GET /projects/:project_id/tasks/new`                  | `new_project_task_path(project)`                    |
+| `POST /projects/:project_id/tasks`                     | `project_tasks_path(project)`                       |
+| `GET /projects/:project_id/tasks/:id/edit`             | `edit_project_task_path(project, task)`             |
+| `PATCH`, `DELETE /projects/:project_id/tasks/:id`      | `project_task_path(project, task)`                  |
+| `PATCH /projects/:project_id/tasks/:id/make_in_progress` | `make_in_progress_project_task_path(project, task)` |
+| `PATCH /projects/:project_id/tasks/:id/make_completed` | `make_completed_project_task_path(project, task)`   |
 
-- ใน `form_with`, `button_to` และ `redirect_to` ส่งเป็น array `[project, task]` แทน path helper ได้
-- ลบ `app/views/tasks/index.html.erb` เพราะ task จะแสดงในหน้า project แทน
+- ใน `form_with` และ `button_to` ส่งเป็น array `[project, task]` แทน path helper ได้
+- ลบไฟล์ที่ scaffold สร้างแต่ไม่ได้ใช้: `app/views/projects/show.html.erb`, `app/views/tasks/index.html.erb`, `app/views/tasks/show.html.erb`
 
-### Step 3: ProjectsController
+### Step 3: Style และ Layout
+
+เพิ่ม component class ที่ทุก view ใช้ร่วมกัน:
+
+```css
+/* app/assets/tailwind/application.css */
+@import "tailwindcss";
+
+@layer components {
+  .btn {
+    @apply inline-block rounded-md px-3.5 py-2.5 text-center font-medium cursor-pointer;
+  }
+
+  .btn-primary {
+    @apply bg-blue-600 text-white hover:bg-blue-500;
+  }
+
+  .btn-secondary {
+    @apply bg-gray-100 hover:bg-gray-50;
+  }
+
+  .btn-danger {
+    @apply bg-red-600 text-white hover:bg-red-500;
+  }
+
+  .input {
+    @apply block w-full mt-2 px-3 py-2 rounded-md border border-gray-400 shadow-sm focus:outline-blue-600;
+  }
+
+  /* Must stay after .input so it wins in the same layer */
+  .input-error {
+    @apply border-red-400 focus:outline-red-600;
+  }
+
+  .form-errors {
+    @apply mt-3 px-3 py-2 rounded-md bg-red-50 text-red-500 font-medium;
+
+    & ul {
+      @apply list-disc ml-6;
+    }
+  }
+
+  .page-title {
+    @apply font-bold text-4xl;
+  }
+
+  .detail-label {
+    @apply block font-medium mb-1;
+  }
+
+  .badge {
+    @apply inline-block px-2 py-1 rounded-full text-xs font-medium;
+  }
+
+  .empty-state {
+    @apply text-center my-10;
+  }
+}
+
+```
+
+แสดง flash message ที่มุมขวาบนของทุกหน้า:
+
+```erb
+<%# app/views/layouts/application.html.erb (ใน <body>) %>
+<main class="container mx-auto mt-28 px-5 flex">
+
+  <div class="fixed top-5 right-5 z-50 flex flex-col gap-3">
+    <% if notice.present? %>
+      <p class="py-3 px-4 bg-green-50 text-green-700 font-medium rounded-lg border border-green-200" id="notice">
+        <%= notice %>
+      </p>
+    <% end %>
+
+    <% if alert.present? %>
+      <p class="py-3 px-4 bg-red-50 text-red-700 font-medium rounded-lg border border-red-200" id="alert">
+        <%= alert %>
+      </p>
+    <% end %>
+  </div>
+
+  <%= yield %>
+</main>
+
+```
+
+### Step 4: ProjectsController
 
 ```ruby
 
 # app/controllers/projects_controller.rb
 class ProjectsController < ApplicationController
-  before_action :set_project, only: %i[show edit update destroy]
+  before_action :set_project, only: %i[ edit update destroy ]
+  before_action :set_tasks, only: %i[ edit update ]
 
   def index
-    @projects = Project.order(:name)
-  end
-
-  def show
-    @tasks = @project.tasks.order(created_at: :desc)
+    @projects = Project.all
   end
 
   def new
@@ -1344,7 +1471,7 @@ class ProjectsController < ApplicationController
     @project = Project.new(project_params)
 
     if @project.save
-      redirect_to @project, notice: "Project created.", status: :see_other
+      redirect_to edit_project_path(@project), notice: "Project was successfully created."
     else
       render :new, status: :unprocessable_content
     end
@@ -1352,136 +1479,392 @@ class ProjectsController < ApplicationController
 
   def update
     if @project.update(project_params)
-      redirect_to @project, notice: "Project updated.", status: :see_other
+      redirect_to edit_project_path(@project), notice: "Project was successfully updated.", status: :see_other
     else
       render :edit, status: :unprocessable_content
     end
   end
 
   def destroy
-    @project.destroy
-    redirect_to projects_path, notice: "Project deleted.", status: :see_other
+    @project.destroy!
+
+    redirect_to projects_path, notice: "Project was successfully destroyed.", status: :see_other
   end
 
   private
+    def set_project
+      @project = Project.find(params.expect(:id))
+    end
 
-  def set_project
-    @project = Project.find(params.expect(:id))
-  end
+    def set_tasks
+      @tasks = @project.tasks
+    end
 
-  def project_params
-    params.expect(project: [:name])
-  end
+    def project_params
+      params.expect(project: [ :name ])
+    end
 end
 
 ```
 
-### Step 4: Partial ที่ครอบด้วย Frame และฟอร์มของ Task
+- `set_tasks` ใช้กับ `update` ด้วย เพราะถ้า validation ไม่ผ่านจะ render หน้า edit ซึ่งแสดงรายการ task
+
+### Step 5: View ของ Project
+
+**หน้ารายการ project:**
 
 ```erb
-<%# app/views/tasks/_task.html.erb %>
-<%= turbo_frame_tag task do %>
-  <div>
-    <span><%= task.title %></span>
-    <span>(<%= task.status.humanize %>)</span>
+<%# app/views/projects/index.html.erb %>
+<% content_for :title, "Projects" %>
 
-    <%= link_to "Edit", edit_project_task_path(task.project, task) %>
-    <%= button_to "Delete", [task.project, task], method: :delete,
-          form: { data: { turbo_confirm: "ลบใช่ไหม?" } } %>
+<div class="w-full">
+  <div class="flex justify-between items-center">
+    <h1 class="page-title">Projects</h1>
+    <%= link_to "New project", new_project_path, class: "btn btn-primary block" %>
+  </div>
+
+  <%= turbo_stream_from "project-container" %>
+
+  <div id="project-list" class="min-w-full divide-y divide-gray-200 space-y-5">
+    <% @projects.each do |project| %>
+      <%= render "projects/project", project: project %>
+    <% end %>
+
+    <p class="empty-state hidden only:block col-span-full">No projects found.</p>
+  </div>
+</div>
+
+```
+
+- `turbo_stream_from "project-container"` รับ broadcast เมื่อ project ถูกเพิ่ม/แก้/ลบ (ตั้งค่าใน Step 9)
+- `#project-list` เป็น target ของ broadcast จึงต้องมีอยู่ในหน้าเสมอ
+- **empty state:** `<p>` อยู่ใน `#project-list` เสมอ และแสดงเฉพาะเมื่อเป็นลูกตัวเดียว (`hidden only:block`)
+
+```erb
+<%# app/views/projects/_project.html.erb %>
+<div id="<%= dom_id project %>" class="flex flex-col sm:flex-row justify-between items-center pb-5 sm:pb-0">
+  <div class="w-full sm:w-auto my-5 space-y-5">
+    <div>
+      <strong class="detail-label">Name:</strong>
+      <%= project.name %>
+    </div>
+  </div>
+  <div class="w-full sm:w-auto flex flex-col sm:flex-row space-x-2 space-y-2">
+    <%= link_to "Edit", edit_project_path(project), class: "btn btn-secondary w-full sm:w-auto" %>
+    <%= button_to "Destroy", project, method: :delete, class: "btn btn-danger w-full sm:w-auto", data: { turbo_confirm: "Are you sure?" } %>
+  </div>
+</div>
+
+```
+
+**ฟอร์มของ project:**
+
+```erb
+<%# app/views/projects/_form.html.erb %>
+<%= form_with model: project, class: "contents" do |form| %>
+  <% if project.errors.any? %>
+    <div id="error_explanation" class="form-errors">
+      <h2><%= pluralize(project.errors.count, "error") %> prohibited this project from being saved:</h2>
+
+      <ul>
+        <% project.errors.each do |error| %>
+          <li><%= error.full_message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="my-5">
+    <%= form.label :name %>
+    <%= form.text_field :name, class: ["input", { "input-error": project.errors[:name].any? }] %>
+  </div>
+
+  <div class="inline">
+    <%= form.submit class: "btn btn-primary w-full sm:w-auto" %>
   </div>
 <% end %>
 
 ```
 
-แก้ฟอร์มที่ scaffold สร้าง:
+```erb
+<%# app/views/projects/new.html.erb %>
+<% content_for :title, "New project" %>
 
-- ลบช่อง `project_id`
+<div class="w-full">
+  <h1 class="page-title">New project</h1>
+
+  <%= render "form", project: @project %>
+
+  <%= link_to "Back to projects", projects_path, class: "btn btn-secondary w-full sm:w-auto mt-2 sm:mt-0 sm:ml-2" %>
+</div>
+
+```
+
+**หน้า edit ของ project (แสดงและจัดการ task ด้วย):**
+
+```erb
+<%# app/views/projects/edit.html.erb %>
+<% content_for :title, "Editing project" %>
+
+<div class="w-full">
+  <h1 class="page-title">Editing project</h1>
+
+  <%= render "form", project: @project %>
+
+  <%= link_to "Back to projects", projects_path, class: "btn btn-secondary w-full sm:w-auto mt-2 sm:mt-0 sm:ml-2" %>
+
+  <%= turbo_stream_from @project, "tasks-container" %>
+
+  <div class="mt-10">
+    <%= render "tasks/index" %>
+  </div>
+
+  <%= turbo_frame_tag "modal" %>
+</div>
+
+```
+
+- `turbo_stream_from @project, "tasks-container"` subscribe เฉพาะ stream ของ project นี้
+- `turbo_frame_tag "modal"` คือ frame ว่างที่รอรับฟอร์ม new/edit ของ task (Step 6)
+
+### Step 6: Modal dialog ด้วย Stimulus
+
+สร้าง controller:
+
+```bash
+docker compose exec web bin/rails generate stimulus dialog
+
+```
+
+```js
+// app/javascript/controllers/dialog_controller.js
+import { Controller } from "@hotwired/stimulus";
+
+export default class extends Controller {
+  connect() {
+    this.frame = this.element.closest("turbo-frame");
+    this.element.showModal();
+  }
+
+  disconnect() {
+    this.frame?.removeAttribute("src");
+  }
+
+  close() {
+    this.element.close();
+  }
+
+  closeOnBackdrop(event) {
+    if (event.target === this.element) {
+      this.close();
+    }
+  }
+
+  clear() {
+    this.element.remove();
+  }
+}
+
+```
+
+สร้าง layout partial ของ modal ที่ใช้ร่วมกันทุกหน้า:
+
+```erb
+<%# app/views/application/_dialog.html.erb %>
+<%= turbo_frame_tag "modal" do %>
+  <dialog data-controller="dialog" data-action="close->dialog#clear click->dialog#closeOnBackdrop" class="m-auto w-full max-w-lg rounded-lg p-0 shadow-xl backdrop:bg-black/50">
+    <div class="p-6">
+      <div class="flex justify-between items-center">
+        <h1 class="font-bold text-2xl"><%= title %></h1>
+        <button type="button" data-action="dialog#close" aria-label="Close" class="text-2xl leading-none text-gray-500 hover:text-gray-700 cursor-pointer">&times;</button>
+      </div>
+
+      <%= yield %>
+    </div>
+  </dialog>
+<% end %>
+
+```
+
+**ลำดับการทำงาน:**
+
+1. ลิงก์ที่มี `data: { turbo_frame: "modal" }` โหลดหน้า new/edit ของ task มาใส่ `<turbo-frame id="modal">`
+2. `<dialog>` เข้ามาในหน้า → `connect()` เรียก `showModal()` เปิด modal
+3. ปิด modal ได้ 3 ทาง: กดปุ่ม ×, คลิก backdrop (`closeOnBackdrop`) หรือกด Esc
+4. `<dialog>` ปิดแล้วเกิด event `close` → `clear()` ลบ element ออก
+5. `disconnect()` ลบ `src` ของ frame เพื่อให้กดลิงก์เดิมซ้ำแล้วโหลดใหม่ได้
+
+- **submit สำเร็จ:** controller redirect ไปหน้า edit ของ project ซึ่งมี `turbo_frame_tag "modal"` ว่าง → frame ถูกแทนที่ด้วยเนื้อหาว่าง → modal ปิดเอง
+- **submit ไม่ผ่าน:** render `new`/`edit` พร้อม status 422 → frame `modal` ได้ dialog ใหม่ที่มี error
+
+### Step 7: View ของ Task
+
+**รายการ task (อยู่ในหน้า edit ของ project):**
+
+```erb
+<%# app/views/tasks/_index.html.erb %>
+<%= turbo_frame_tag dom_id(@project, "tasks") do %>
+  <div class="w-full space-y-5">
+    <div class="flex justify-between items-center">
+      <h2 class="font-bold text-2xl">
+        Tasks
+        <span id="<%= dom_id(@project, "tasks-completed-count") %>" class="text-base font-normal text-gray-500">
+          <%= render "tasks/completed_count", project: @project %>
+        </span>
+      </h2>
+      <%= link_to "New task", new_project_task_path(@project), data: { turbo_frame: "modal" }, class: "btn btn-primary block" %>
+    </div>
+
+    <div id="task-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+
+      <% if @tasks.present? %>
+
+        <% @tasks.each do |task| %>
+          <%= render "tasks/task", task: task %>
+        <% end %>
+
+      <% end %>
+
+      <p class="empty-state hidden only:block col-span-full">No tasks found.</p>
+
+    </div>
+  </div>
+<% end %>
+
+```
+
+```erb
+<%# app/views/tasks/_completed_count.html.erb %>
+(<%= project.tasks.completed.count %>/<%= project.tasks.count %> completed)
+
+```
+
+- **`dom_id(@project, "tasks")`** สร้าง id เช่น `tasks_project_1`
+  - ปุ่ม Destroy ใน frame นี้จะอัปเดตเฉพาะ frame หลัง redirect
+- **`#task-list`** เป็น target ของ broadcast (Step 9) จึงต้องมีอยู่ในหน้าเสมอ
+- **empty state:** `hidden only:block` แสดงข้อความเมื่อ `<p>` เป็นลูกตัวเดียวของ `#task-list`
+  - เมื่อมี task ถูก append เข้ามา ข้อความจะซ่อนเองโดยไม่ต้องเขียน JS
+
+**การ์ดของ task:**
+
+```erb
+<%# app/views/tasks/_task.html.erb %>
+<div id="<%= dom_id(task) %>" class="flex flex-col justify-between h-full rounded-lg border border-gray-200 shadow-sm p-5 space-y-4">
+  <div class="space-y-3">
+
+    <div>
+      <strong class="detail-label">Title:</strong>
+      <%= task.title %>
+    </div>
+
+    <div>
+      <strong class="detail-label">Status:</strong>
+      <%= task_status_badge(task) %>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 gap-2">
+
+    <% if task.pending? %>
+      <%= button_to "Mark in progress", make_in_progress_project_task_path(task.project, task), method: :patch, class: "btn btn-secondary w-full" %>
+    <% elsif task.in_progress? %>
+      <%= button_to "Mark complete", make_completed_project_task_path(task.project, task), method: :patch, class: "btn btn-secondary w-full" %>
+    <% end %>
+
+    <%= link_to "Edit", edit_project_task_path(task.project, task), data: { turbo_frame: "modal" }, class: "btn btn-secondary" %>
+
+    <%= button_to "Destroy", [ task.project, task ], method: :delete, form_class: "col-span-2", class: "btn btn-danger w-full", data: { turbo_confirm: "Are you sure?" } %>
+
+  </div>
+</div>
+
+```
+
+```ruby
+
+# app/helpers/tasks_helper.rb
+module TasksHelper
+  TASK_STATUS_BADGE_CLASSES = {
+    "pending" => "bg-gray-100 text-gray-800",
+    "in_progress" => "bg-yellow-100 text-yellow-800",
+    "completed" => "bg-green-100 text-green-800"
+  }.freeze
+
+  def task_status_badge(task)
+    tag.span task.status.humanize, class: [ "badge", TASK_STATUS_BADGE_CLASSES.fetch(task.status) ]
+  end
+end
+
+```
+
+**ฟอร์มของ task:**
+
+- ลบช่อง `project_id` ที่ scaffold สร้าง
 - เปลี่ยนช่อง `status` จากตัวเลขเป็น select
-- ส่งไปถูก route ด้วย `form_with model: [task.project, task]`
+- ส่งไปถูก route ด้วย `form_with model: [ project, task ]`
 
 ```erb
 <%# app/views/tasks/_form.html.erb %>
-<%# task ใหม่ส่งไป POST /projects/:project_id/tasks ส่วน task เดิมส่งไป PATCH /projects/:project_id/tasks/:id %>
-<%= form_with model: [task.project, task] do |form| %>
-  <% task.errors.full_messages.each do |message| %>
-    <p><%= message %></p>
+<%= form_with model: [ project, task ], class: "contents" do |form| %>
+  <% if task.errors.any? %>
+    <div id="error_explanation" class="form-errors">
+      <h2><%= pluralize(task.errors.count, "error") %> prohibited this task from being saved:</h2>
+
+      <ul>
+        <% task.errors.each do |error| %>
+          <li><%= error.full_message %></li>
+        <% end %>
+      </ul>
+    </div>
   <% end %>
 
-  <%= form.label :title %>
-  <%= form.text_field :title %>
+  <div class="my-5">
+    <%= form.label :title %>
+    <%= form.text_field :title, class: ["input", { "input-error": task.errors[:title].any? }] %>
+  </div>
 
-  <%= form.label :status %>
-  <%= form.select :status, Task.statuses.keys.map { |status| [status.humanize, status] } %>
+  <div class="my-5 flex items-center gap-2">
+    <%= form.label :status %>
+    <%= form.select :status, Task.statuses.keys.map { |key| [key.humanize, key] }, { prompt: "Select Status" }, { class: ["input", { "input-error": task.errors[:status].any? }] } %>
+  </div>
 
-  <%= form.submit %>
+  <div class="inline">
+    <%= form.submit class: "btn btn-primary w-full sm:w-auto" %>
+  </div>
 <% end %>
 
 ```
 
-แก้หน้า edit ให้มี frame id เดียวกัน:
-
-- ถ้าไม่แก้ กด Edit แล้วจะเห็น "Content missing"
-
-```erb
-<%# app/views/tasks/edit.html.erb %>
-<h1>Edit task</h1>
-
-<%= turbo_frame_tag @task do %>
-  <%= render "form", task: @task %>
-<% end %>
-
-```
-
-แก้หน้า new:
-
-- ใช้เป็น fallback ตอนที่ไม่ได้ submit ผ่าน Turbo
-- ลิงก์ `tasks_path` ที่ scaffold สร้างไว้ใช้ไม่ได้แล้ว เพราะไม่มี route index
+หน้า new และ edit ใช้ layout partial `dialog` จาก Step 6:
 
 ```erb
 <%# app/views/tasks/new.html.erb %>
-<h1>New task</h1>
+<% content_for :title, "New task" %>
 
-<%= render "form", task: @task %>
-<%= link_to "Back", @task.project %>
+<%= render layout: "dialog", locals: { title: "New task" } do %>
+  <%= render "form", project: @project, task: @task %>
+<% end %>
 
 ```
-
-### Step 5: หน้า Project พร้อมฟอร์มสร้างงานและ stream
 
 ```erb
-<%# app/views/projects/show.html.erb %>
-<%= turbo_stream_from @project %>
+<%# app/views/tasks/edit.html.erb %>
+<% content_for :title, "Editing task" %>
 
-<h1><%= @project.name %></h1>
-
-<%= link_to "Edit project", edit_project_path(@project) %>
-<%= link_to "All projects", projects_path %>
-
-<%# target ของ stream เป็น div ธรรมดาได้ ไม่ต้องใช้ turbo_frame_tag %>
-<div id="new_task">
-  <%= render "tasks/form", task: @project.tasks.new %>
-</div>
-
-<div id="tasks">
-  <%= render @tasks %>
-</div>
+<%= render layout: "dialog", locals: { title: "Editing task" } do %>
+  <%= render "form", project: @project, task: @task %>
+<% end %>
 
 ```
 
-- `turbo_stream_from @project` subscribe เฉพาะ stream ของ project นี้
-- คนที่เปิด project อื่นจะไม่ได้รับ broadcast ของ project นี้
-
-### Step 6: TasksController
+### Step 8: TasksController
 
 ```ruby
 
 # app/controllers/tasks_controller.rb
 class TasksController < ApplicationController
   before_action :set_project
-  before_action :set_task, only: %i[show edit update destroy]
-
-  def show
-  end
+  before_action :set_task, only: %i[ edit update destroy make_in_progress make_completed ]
 
   def new
     @task = @project.tasks.new
@@ -1493,142 +1876,197 @@ class TasksController < ApplicationController
   def create
     @task = @project.tasks.new(task_params)
 
-    respond_to do |format|
-      if @task.save
-        format.turbo_stream
-        format.html { redirect_to @project, notice: "Task created.", status: :see_other }
-      else
-        format.turbo_stream do
-          render turbo_stream: turbo_stream.update("new_task", partial: "tasks/form", locals: { task: @task }),
-                 status: :unprocessable_content
-        end
-        format.html { render :new, status: :unprocessable_content }
-      end
+    if @task.save
+      redirect_to edit_project_path(@project), notice: "Task was successfully created."
+    else
+      render :new, status: :unprocessable_content
     end
   end
 
   def update
     if @task.update(task_params)
-      redirect_to [@project, @task], status: :see_other  # show.html.erb render _task ซึ่งมี frame id เดียวกัน
+      redirect_to edit_project_path(@project), notice: "Task was successfully updated.", status: :see_other
     else
       render :edit, status: :unprocessable_content
     end
   end
 
   def destroy
-    @task.destroy
+    @task.destroy!
+
+    redirect_to edit_project_path(@project), notice: "Task was successfully destroyed.", status: :see_other
+  end
+
+  def make_in_progress
+    @task.in_progress!
 
     respond_to do |format|
-      format.turbo_stream { render turbo_stream: turbo_stream.remove(@task) }
-      format.html { redirect_to @project, status: :see_other }
+      format.turbo_stream { render :update_status }
+      format.html { redirect_to edit_project_path(@project), status: :see_other }
+    end
+  end
+
+  def make_completed
+    @task.completed!
+
+    respond_to do |format|
+      format.turbo_stream { render :update_status }
+      format.html { redirect_to edit_project_path(@project), status: :see_other }
     end
   end
 
   private
+    def set_project
+      @project = Project.find(params.expect(:project_id))
+    end
 
-  def set_project
-    @project = Project.find(params.expect(:project_id))
-  end
+    def set_task
+      @task = @project.tasks.find(params.expect(:id))
+    end
 
-  def set_task
-    @task = @project.tasks.find(params.expect(:id))
-  end
-
-  def task_params
-    params.expect(task: %i[title status])
-  end
+    def task_params
+      params.expect(task: [ :title, :status ])
+    end
 end
 
 ```
 
+`make_in_progress` และ `make_completed` ใช้ Turbo Stream template เดียวกัน อัปเดต 2 จุดพร้อมกัน:
+
 ```erb
-<%# app/views/tasks/create.turbo_stream.erb %>
-<%= turbo_stream.prepend "tasks", @task %>
-<%= turbo_stream.update "new_task", partial: "tasks/form", locals: { task: @project.tasks.new } %>
+<%# app/views/tasks/update_status.turbo_stream.erb %>
+<%= turbo_stream.replace dom_id(@task), partial: "tasks/task", locals: { task: @task } %>
+
+<%= turbo_stream.update dom_id(@project, "tasks-completed-count"), partial: "tasks/completed_count", locals: { project: @project } %>
 
 ```
 
-```erb
-<%# app/views/tasks/show.html.erb %>
-<%= render @task %>
+- `replace dom_id(@task)` → แทนที่การ์ดของ task (ปุ่มเปลี่ยนตามสถานะใหม่)
+- `update dom_id(@project, "tasks-completed-count")` → อัปเดตตัวเลข `(1/3 completed)`
 
-```
+### Step 9: Real-time
 
-### Step 7: Real-time
+**Task: broadcast การ์ดและจำนวน task ที่เสร็จ**
 
 ```ruby
 
 # app/models/task.rb
 class Task < ApplicationRecord
-  belongs_to :project
+  enum :status, { pending: 0, in_progress: 1, completed: 2 }, validate: true
 
-  enum :status, { todo: 0, in_progress: 1, done: 2 }, validate: true
+  belongs_to :project
 
   validates :title, presence: true
 
-  # create → prepend ใน #tasks, update → replace, destroy → remove
-  broadcasts_to :project, inserts_by: :prepend
+  broadcasts_to ->(task) { [ task.project, "tasks-container" ] }, target: "task-list"
+
+  after_commit :broadcast_completed_count, unless: :destroyed_by_association
+
+  private
+    def broadcast_completed_count
+      broadcast_update_later_to [ project, "tasks-container" ],
+        target: ActionView::RecordIdentifier.dom_id(project, "tasks-completed-count"),
+        partial: "tasks/completed_count",
+        locals: { project: project }
+    end
 end
 
 ```
 
+- **`broadcasts_to`:** create → append ใน `#task-list`, update → replace, destroy → remove
+- **stream name** `[ task.project, "tasks-container" ]` ต้องตรงกับ `turbo_stream_from @project, "tasks-container"` ในหน้า edit ของ project
+- **`after_commit`:** ทุกครั้งที่ task ถูกสร้าง/แก้/ลบ จะส่งจำนวน task ที่เสร็จใหม่ไปที่ `#tasks-completed-count_project_1`
+- **`unless: :destroyed_by_association`:** ข้ามเมื่อ task ถูกลบเพราะลบ project (`dependent: :destroy`)
+  - ไม่อย่างนั้น background job จะหา project ที่ถูกลบไปแล้วไม่เจอ
+
+**Project: broadcast ไปหน้ารายการ project**
+
+```ruby
+
+# app/models/project.rb
+class Project < ApplicationRecord
+  has_many :tasks, dependent: :destroy
+
+  validates :name, presence: true
+
+  broadcasts_to ->(_) { "project-container" }, target: "project-list"
+end
+
+```
+
+- ทุกคนที่เปิดหน้ารายการ project (`turbo_stream_from "project-container"`) ได้รับ broadcast
+- create → append ใน `#project-list`, update → replace, destroy → remove (render partial `projects/_project`)
+
 **ทดสอบ:**
 
-1. เปิด project เดียวกันใน 2 browser
-2. ลองเพิ่ม/แก้/ลบ task จะเห็นการเปลี่ยนแปลงทั้งสองหน้าทันที
+1. เปิดหน้า edit ของ project เดียวกันใน 2 browser
+2. ลองเพิ่ม/แก้/ลบ/เปลี่ยนสถานะ task จะเห็นการ์ดและจำนวน task ที่เสร็จเปลี่ยนทั้งสองหน้าทันที
 3. project อื่นจะไม่ได้รับอะไรเลย
+4. เปิดหน้ารายการ project ใน browser หนึ่ง แล้วสร้าง/แก้ชื่อ project ในอีก browser จะเห็นรายการอัปเดตเอง
 
 > **Note:** task ไม่ซ้ำในหน้าของคนที่สร้าง เพราะ
 >
+> - ผู้สร้างได้รับ task ใหม่ผ่าน broadcast เพียงทางเดียว (response ของฟอร์มอัปเดตแค่ frame `modal`)
 > - ถ้ามี element ที่ id เดียวกันเป็น**ลูกโดยตรง**ของ target อยู่แล้ว `append` / `prepend` จะแทนที่ของเดิม
-> - `<turbo-frame id="task_1">` เป็นลูกโดยตรงของ `#tasks`
 
 > **Security:** workshop นี้ไม่มี authentication ใครก็เปิดและแก้ได้ทุก project ในงานจริงให้:
 >
 > 1. เพิ่ม authentication (เช่น `bin/rails generate authentication` ของ Rails 8)
 > 2. ผูก project กับผู้ใช้
 > 3. หา project ผ่าน `Current.user.projects.find` เพื่อให้ทั้งหน้าและ stream เห็นได้เฉพาะผู้ที่มีสิทธิ์
+> 4. stream `"project-container"` ใช้ร่วมกันทุกคน ต้องเปลี่ยนเป็น stream ต่อผู้ใช้
 
 ### โครงสร้างหลังทำ workshop เสร็จ
 
-- ไฟล์ที่สร้างหรือแก้ใน Step 1-7
-- ใช้ตรวจงานของตัวเองหลังทำเสร็จ
+- ไฟล์ที่สร้างหรือแก้ใน Step 1-9
+- ใช้ตรวจงานของตัวเองหลังทำเสร็จ หรือเทียบกับ [branch `hotwire/demo`](https://github.com/paradon-sg/BC-Bootcamp/tree/hotwire/demo)
 
 ```
 hotwire-bootcamp/
 ├── app/
+│   ├── assets/
+│   │   └── tailwind/
+│   │       └── application.css                 # component class: btn, input, badge, ...
 │   ├── controllers/
-│   │   ├── projects_controller.rb          # CRUD project, show แสดง tasks ของ project
-│   │   └── tasks_controller.rb             # create ตอบ turbo_stream, destroy ตอบ turbo_stream.remove
+│   │   ├── projects_controller.rb              # CRUD project (ไม่มี show), edit แสดง tasks
+│   │   └── tasks_controller.rb                 # CRUD task + make_in_progress / make_completed
+│   ├── helpers/
+│   │   └── tasks_helper.rb                     # task_status_badge
+│   ├── javascript/
+│   │   └── controllers/
+│   │       ├── dialog_controller.js            # เปิด/ปิด <dialog> ใน frame modal
+│   │       └── index.js                        # register dialog controller
 │   ├── models/
-│   │   ├── project.rb                      # has_many :tasks
-│   │   └── task.rb                         # enum status + broadcasts_to :project
+│   │   ├── project.rb                          # has_many :tasks + broadcasts_to project-list
+│   │   └── task.rb                             # enum status + broadcasts_to + completed count
 │   └── views/
+│       ├── application/
+│       │   └── _dialog.html.erb                # layout ของ modal (turbo_frame_tag "modal")
+│       ├── layouts/
+│       │   └── application.html.erb            # flash message
 │       ├── projects/
 │       │   ├── _form.html.erb
 │       │   ├── _project.html.erb
-│       │   ├── index.html.erb
+│       │   ├── index.html.erb                  # turbo_stream_from "project-container" + #project-list
 │       │   ├── new.html.erb
-│       │   ├── edit.html.erb
-│       │   └── show.html.erb               # turbo_stream_from + #new_task + #tasks
+│       │   └── edit.html.erb                   # turbo_stream_from + tasks/index + frame modal
 │       └── tasks/
-│           ├── _task.html.erb              # turbo_frame_tag task (ใช้ซ้ำทั้งใน frame, stream และ broadcast)
-│           ├── _form.html.erb              # form_with model: [task.project, task]
-│           ├── new.html.erb                # fallback เมื่อไม่ได้ submit ผ่าน Turbo
-│           ├── edit.html.erb               # turbo_frame_tag @task + ฟอร์ม (inline edit)
-│           ├── show.html.erb               # render @task หลัง update
-│           └── create.turbo_stream.erb     # prepend task ใหม่ + reset ฟอร์ม
+│           ├── _index.html.erb                 # frame ของรายการ task + #task-list
+│           ├── _task.html.erb                  # การ์ด task (ใช้ซ้ำทั้งใน view, stream และ broadcast)
+│           ├── _completed_count.html.erb       # (x/y completed)
+│           ├── _form.html.erb                  # form_with model: [ project, task ]
+│           ├── new.html.erb                    # render layout: "dialog"
+│           ├── edit.html.erb                   # render layout: "dialog"
+│           └── update_status.turbo_stream.erb  # replace การ์ด + update completed count
 ├── config/
-│   └── routes.rb                           # resources :projects + tasks (nested, except: :index)
+│   └── routes.rb                               # projects (except: :show) + tasks (nested + member)
 └── db/
     ├── migrate/
     │   ├── xxxxxxxxxxxxxx_create_projects.rb
-    │   └── xxxxxxxxxxxxxx_create_tasks.rb  # project_id FK, title (not null), status (default 0)
+    │   └── xxxxxxxxxxxxxx_create_tasks.rb      # project_id FK, title (not null), status (default 0)
     └── schema.rb
 
 ```
-
-> **ตัวอย่างเพิ่มเติม:** [branch `hotwire/demo`](https://github.com/paradon-sg/BC-Bootcamp/tree/hotwire/demo) เป็น Task app อีกแบบที่ใช้ modal (`<dialog>` + Stimulus), member action สำหรับเปลี่ยนสถานะ และ broadcast จำนวน task ที่เสร็จ
 
 ## 13. Best Practices & Common Pitfalls
 
