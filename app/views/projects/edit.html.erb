@@ -1,11 +1,12 @@
 <% content_for :title, "Editing project" %>
 
-<div class="w-full">
-  <h1 class="page-title">Editing project</h1>
+<div class="w-full space-y-6">
+  <div class="flex items-center justify-between">
+    <h1 class="text-3xl font-bold text-gray-900">Editing project</h1>
+    <%= link_to "Back to projects", projects_path, class: "btn btn-ghost" %>
+  </div>
 
   <%= render "form", project: @project %>
-
-  <%= link_to "Back to projects", projects_path, class: "btn btn-secondary w-full sm:w-auto mt-2 sm:mt-0 sm:ml-2" %>
 
   <%= turbo_stream_from @project, "tasks-container" %>
 

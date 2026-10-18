@@ -1,52 +1,75 @@
 @import "tailwindcss";
 
 @layer components {
+  .container-main {
+    @apply mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8;
+  }
+
   .btn {
-    @apply inline-block rounded-md px-3.5 py-2.5 text-center font-medium cursor-pointer;
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-primary {
-    @apply bg-blue-600 text-white hover:bg-blue-500;
+    @apply bg-blue-600 text-white hover:bg-blue-700 focus-visible:ring-blue-500;
   }
 
   .btn-secondary {
-    @apply bg-gray-100 hover:bg-gray-50;
+    @apply border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus-visible:ring-gray-400;
   }
 
   .btn-danger {
-    @apply bg-red-600 text-white hover:bg-red-500;
+    @apply bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500;
   }
 
-  .input {
-    @apply block w-full mt-2 px-3 py-2 rounded-md border border-gray-400 shadow-sm focus:outline-blue-600;
+  .btn-ghost {
+    @apply text-gray-700 hover:bg-gray-100 focus-visible:ring-gray-400;
   }
 
-  /* Must stay after .input so it wins in the same layer */
-  .input-error {
-    @apply border-red-400 focus:outline-red-600;
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
   }
 
-  .form-errors {
-    @apply mt-3 px-3 py-2 rounded-md bg-red-50 text-red-500 font-medium;
-
-    & ul {
-      @apply list-disc ml-6;
-    }
+  .form-group {
+    @apply space-y-2;
   }
 
-  .page-title {
-    @apply font-bold text-4xl;
+  .form-label {
+    @apply block text-sm font-medium text-gray-700;
   }
 
-  .detail-label {
-    @apply block font-medium mb-1;
+  .form-input,
+  .form-select,
+  .form-textarea {
+    @apply block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:bg-gray-50;
   }
 
-  .badge {
-    @apply inline-block px-2 py-1 rounded-full text-xs font-medium;
+  .form-textarea {
+    @apply min-h-24;
   }
 
-  .empty-state {
-    @apply text-center my-10;
+  .form-checkbox {
+    @apply size-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500;
+  }
+
+  .form-hint {
+    @apply text-xs text-gray-500;
+  }
+
+  .form-error {
+    @apply text-sm text-red-600;
+  }
+
+  .form-actions {
+    @apply flex items-center justify-end gap-3 border-t border-gray-100 pt-5;
+  }
+
+  .field_with_errors .form-input,
+  .field_with_errors .form-select,
+  .field_with_errors .form-textarea {
+    @apply border-red-500 focus:border-red-500 focus:ring-red-500/20;
+  }
+
+  .field_with_errors .form-label {
+    @apply text-red-600;
   }
 }

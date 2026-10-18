@@ -6,6 +6,6 @@ module TasksHelper
   }.freeze
 
   def task_status_badge(task)
-    tag.span task.status.humanize, class: [ "badge", TASK_STATUS_BADGE_CLASSES.fetch(task.status) ]
+    tag.span task.status.humanize, class: [ "inline-block rounded-full px-2 py-1 text-xs font-medium", TASK_STATUS_BADGE_CLASSES.fetch(task.status) ]
   end
 end

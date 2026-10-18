@@ -7,7 +7,7 @@
           <%= render "tasks/completed_count", project: @project %>
         </span>
       </h2>
-      <%= link_to "New task", new_project_task_path(@project), data: { turbo_frame: "modal" }, class: "btn btn-primary block" %>
+      <%= link_to "New task", new_project_task_path(@project), data: { turbo_frame: "modal" }, class: "btn btn-primary" %>
     </div>
 
     <div id="task-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -20,7 +20,7 @@
 
       <% end %>
 
-      <p class="empty-state hidden only:block col-span-full">No tasks found.</p>
+      <p class="hidden only:block col-span-full py-10 text-center text-gray-500">No tasks found.</p>
 
     </div>
   </div>

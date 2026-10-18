@@ -1,27 +1,22 @@
-<%= form_with model: [ project, task ], class: "contents" do |form| %>
-  <% if task.errors.any? %>
-    <div id="error_explanation" class="form-errors">
-      <h2><%= pluralize(task.errors.count, "error") %> prohibited this task from being saved:</h2>
-
-      <ul>
-        <% task.errors.each do |error| %>
-          <li><%= error.full_message %></li>
-        <% end %>
-      </ul>
-    </div>
-  <% end %>
-
-  <div class="my-5">
-    <%= form.label :title %>
-    <%= form.text_field :title, class: ["input", { "input-error": task.errors[:title].any? }] %>
+<%= form_with model: [ project, task ], class: "mt-5 space-y-5" do |form| %>
+  <div class="form-group">
+    <%= form.label :title, class: "form-label" %>
+    <%= form.text_field :title, class: "form-input", placeholder: "Task title" %>
+    <% task.errors.full_messages_for(:title).each do |message| %>
+      <p class="form-error"><%= message %></p>
+    <% end %>
   </div>
 
-  <div class="my-5 flex items-center gap-2">
-    <%= form.label :status %>
-    <%= form.select :status, Task.statuses.keys.map { |key| [key.humanize, key] }, { prompt: "Select Status" }, { class: ["input", { "input-error": task.errors[:status].any? }] } %>
+  <div class="form-group">
+    <%= form.label :status, class: "form-label" %>
+    <%= form.select :status, Task.statuses.keys.map { |key| [key.humanize, key] }, { prompt: "Select Status" }, { class: "form-select" } %>
+    <% task.errors.full_messages_for(:status).each do |message| %>
+      <p class="form-error"><%= message %></p>
+    <% end %>
   </div>
 
-  <div class="inline">
-    <%= form.submit class: "btn btn-primary w-full sm:w-auto" %>
+  <div class="form-actions">
+    <button type="button" data-action="dialog#close" class="btn btn-secondary">Cancel</button>
+    <%= form.submit class: "btn btn-primary" %>
   </div>
 <% end %>

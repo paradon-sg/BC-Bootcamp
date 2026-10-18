@@ -13,7 +13,7 @@ class TasksController < ApplicationController
     @task = @project.tasks.new(task_params)
 
     if @task.save
-      redirect_to edit_project_path(@project), notice: "Task was successfully created."
+      redirect_to edit_project_path(@project)
     else
       render :new, status: :unprocessable_content
     end
@@ -21,7 +21,7 @@ class TasksController < ApplicationController
 
   def update
     if @task.update(task_params)
-      redirect_to edit_project_path(@project), notice: "Task was successfully updated.", status: :see_other
+      redirect_to edit_project_path(@project), status: :see_other
     else
       render :edit, status: :unprocessable_content
     end
@@ -30,7 +30,7 @@ class TasksController < ApplicationController
   def destroy
     @task.destroy!
 
-    redirect_to edit_project_path(@project), notice: "Task was successfully destroyed.", status: :see_other
+    redirect_to edit_project_path(@project), status: :see_other
   end
 
   def make_in_progress

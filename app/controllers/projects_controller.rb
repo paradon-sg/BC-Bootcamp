@@ -17,7 +17,7 @@ class ProjectsController < ApplicationController
     @project = Project.new(project_params)
 
     if @project.save
-      redirect_to edit_project_path(@project), notice: "Project was successfully created."
+      redirect_to edit_project_path(@project), status: :ok
     else
       render :new, status: :unprocessable_content
     end
@@ -25,7 +25,7 @@ class ProjectsController < ApplicationController
 
   def update
     if @project.update(project_params)
-      redirect_to edit_project_path(@project), notice: "Project was successfully updated.", status: :see_other
+      redirect_to edit_project_path(@project), status: :see_other
     else
       render :edit, status: :unprocessable_content
     end
@@ -34,7 +34,7 @@ class ProjectsController < ApplicationController
   def destroy
     @project.destroy!
 
-    redirect_to projects_path, notice: "Project was successfully destroyed.", status: :see_other
+    redirect_to projects_path, status: :see_other
   end
 
   private

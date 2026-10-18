@@ -24,22 +24,7 @@
   </head>
 
   <body>
-    <main class="container mx-auto mt-28 px-5 flex">
-
-      <div class="fixed top-5 right-5 z-50 flex flex-col gap-3">
-        <% if notice.present? %>
-          <p class="py-3 px-4 bg-green-50 text-green-700 font-medium rounded-lg border border-green-200" id="notice">
-            <%= notice %>
-          </p>
-        <% end %>
-
-        <% if alert.present? %>
-          <p class="py-3 px-4 bg-red-50 text-red-700 font-medium rounded-lg border border-red-200" id="alert">
-            <%= alert %>
-          </p>
-        <% end %>
-      </div>
-
+    <main class="container-main">
       <%= yield %>
     </main>
   </body>
