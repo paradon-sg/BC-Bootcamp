@@ -24,12 +24,18 @@ services:
       - "3000:3000"
     depends_on:
       - js
+      - css
     stdin_open: true
     tty: true
 
   js:
     <<: *app
     command: yarn build --watch=forever
+
+  css:
+    <<: *app
+    command: bin/rails tailwindcss:watch
+    tty: true
 
 volumes:
   bundle:
